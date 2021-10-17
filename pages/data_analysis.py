@@ -2,10 +2,11 @@ import streamlit as st
 import streamlit.components.v1 as components
 import os
 import matplotlib.pyplot as plt
+import seaborn as sns
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import numpy as np
-
+from scipy.stats import norm
 
 import automlbuilder as amb
 
@@ -59,23 +60,31 @@ def data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess
                 for col in normaliseSelect:
                     if is_numeric_dtype(editedData[col]):
                         if col == target_att:
-                            transformTarget = True
+                            st.session_state['transformTarget'] = True
                         else:
-                            editedData[col] = np.log1p(workingData[col])
-                st.pyplot(plt = editedData.hist(bins=50, figsize=(15, 15)))
-
+                            st.write (col +' skew = '+str(workingData[col].skew()))
+                            fig, ax = plt.subplots()
+                            ax = sns.distplot(workingData[col], fit=norm)
+                            st.pyplot(fig)
+                            editedData[col] = np.log1p(editedData[col])
+                            plt.clf()
+                            st.write('skew after log transformation =' + str(editedData[col].skew()))
+                            fig, ax = plt.subplots()
+                            ax = sns.distplot(editedData[col], fit=norm)
+                            st.pyplot(fig)
             if dummySelect != None:
                 for col in dummySelect:
                     if is_numeric_dtype(editedData[col]) == False:
                         editedData = pd.get_dummies(editedData, columns=[col])
             if outlierSelect == 'Yes':
                 amb.drop_numerical_outliers(editedData)
-            st.markdown('## Dataset')
+            st.markdown('## Updated Dataset')
             st.dataframe(editedData.astype('object'))
             editedData.to_csv(modellingDataPath + 'Modelling_Data.csv', index=False, )
+            st.session_state.dataEdited = True
         else:
-            workingData.to_csv(modellingDataPath+'Modelling_Data.csv', index=False,)
-    return (workingData, transformTarget)
+             workingData.to_csv(modellingDataPath+'Modelling_Data.csv', index=False,)
+    return
 
 def app():
     modelType = st.session_state['modelType']
@@ -85,7 +94,10 @@ def app():
     analysisReportsPath = st.session_state['analysisReportsPath']
     analysisPlotsPath = st.session_state['analysisPlotsPath']
 
-    workingData = pd.read_csv(dataPath + 'Original_Data.csv')
+    if st.session_state.dataEdited == False:
+        workingData = pd.read_csv(dataPath + 'Original_Data.csv')
+    else:
+        workingData = pd.read_csv(modellingDataPath + 'Modelling_Data.csv')
 
     amb.half_masked_corr_heatmap(workingData, analysisPlotsPath + 'correlation.png')
     amb.gen_scatterplots(workingData, target_att, analysisPlotsPath + 'scatter.png')
@@ -96,11 +108,8 @@ def app():
                                                  analysisReportsPath)
     pp_report, ppReportSuccess = amb.generate_pp(workingData, analysisReportsPath)
 
-    workingdata, transformTarget = data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess,
+    data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess,
                                                  pp_report, ppReportSuccess, analysisPlotsPath, modellingDataPath)
 
-    st.session_state['workingdata'] = workingdata
-    if 'transformTarget' not in st.session_state:
-        st.session_state['transformTarget'] = transformTarget
 
 

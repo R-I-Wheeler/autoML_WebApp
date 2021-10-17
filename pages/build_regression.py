@@ -143,6 +143,7 @@ def app():
     modellingDataPath = st.session_state['modellingDataPath']
     transformTarget = st.session_state['transformTarget']
 
+
     workingData = pd.read_csv(modellingDataPath + 'Modelling_Data.csv')
 
     model_development(workingData, target_att, modelType, transformTarget, modellingReportsPath, projectName,

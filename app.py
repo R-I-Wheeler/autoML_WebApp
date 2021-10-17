@@ -27,45 +27,49 @@ def main():
         if target_att == 'Select Target Attribute...':
             st.stop()
         else:
-
             if modelType == 'Classification':
                 workingData[target_att] = workingData[target_att].astype('int32')
+        analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath = amb.generate_working_directories(
+            projectName)
 
-            analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath = amb.generate_working_directories(projectName)
+        workingData.to_csv(dataPath + 'Original_Data.csv', index=False)
+
+        if 'modelType' not in st.session_state:
+            st.session_state['modelType'] = modelType
+        if 'target_att' not in st.session_state:
+            st.session_state['target_att'] = target_att
+        if 'projectName' not in st.session_state:
+            st.session_state['projectName'] = projectName
+        if 'dataPath' not in st.session_state:
+            st.session_state['dataPath'] = dataPath
+        if 'modellingModelPath' not in st.session_state:
+            st.session_state['modellingModelPath'] = modellingModelPath
+        if 'modellingReportsPath' not in st.session_state:
+            st.session_state['modellingReportsPath'] = modellingReportsPath
+        if 'modellingDataPath' not in st.session_state:
+            st.session_state['modellingDataPath'] = modellingDataPath
+        if 'analysisReportsPath' not in st.session_state:
+            st.session_state['analysisReportsPath'] = analysisReportsPath
+        if 'analysisPlotsPath' not in st.session_state:
+            st.session_state['analysisPlotsPath'] = analysisPlotsPath
+        transformTarget = False
+        if 'transformTarget' not in st.session_state:
+            st.session_state['transformTarget'] = transformTarget
+        dataEdited = False
+        if 'dataEdited' not in st.session_state:
+            st.session_state['dataEdited'] = dataEdited
+
+        # Add all your applications (pages) here
+        app.add_page("Data Analysis", data_analysis.app)
+        if modelType == 'Classification':
+            app.add_page("Classifier Model Builder", build_classifier.app)
+        else:
+            app.add_page("Regression Model Builder", build_regression.app)
+        app.add_page("Model Explainability", explainability.app)
+        # The main app
+        app.run()
     else:
         st.stop()
-
-    workingData.to_csv(dataPath + 'Original_Data.csv', index=False)
-
-    if 'modelType' not in st.session_state:
-        st.session_state['modelType'] = modelType
-    if 'target_att' not in st.session_state:
-        st.session_state['target_att'] = target_att
-    if 'projectName' not in st.session_state:
-        st.session_state['projectName'] = projectName
-    if 'dataPath' not in st.session_state:
-        st.session_state['dataPath'] = dataPath
-    if 'modellingModelPath' not in st.session_state:
-        st.session_state['modellingModelPath'] = modellingModelPath
-    if 'modellingReportsPath' not in st.session_state:
-        st.session_state['modellingReportsPath'] = modellingReportsPath
-    if 'modellingDataPath' not in st.session_state:
-        st.session_state['modellingDataPath'] = modellingDataPath
-    if 'analysisReportsPath' not in st.session_state:
-        st.session_state['analysisReportsPath'] = analysisReportsPath
-    if 'analysisPlotsPath' not in st.session_state:
-        st.session_state['analysisPlotsPath'] = analysisPlotsPath
-
-
-    # Add all your applications (pages) here
-    app.add_page("Data Analysis", data_analysis.app)
-    if modelType == 'Classification':
-        app.add_page("Classifier Model Builder", build_classifier.app)
-    else:
-        app.add_page("Regression Model Builder", build_regression.app)
-    app.add_page("Model Explainability", explainability.app)
-    # The main app
-    app.run()
 
 if __name__ == "__main__":
     main()

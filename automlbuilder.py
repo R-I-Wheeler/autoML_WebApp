@@ -102,8 +102,6 @@ def half_masked_corr_heatmap(workingdata, file=None):
     plt.title(f'Variable Correlations', fontsize=24)
 
     if file: plt.savefig(file, bbox_inches='tight')
-    plt.show()
-
     return
 
 @st.cache
