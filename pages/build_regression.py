@@ -2,7 +2,6 @@ import streamlit as st
 import streamlit.components.v1 as components
 import automlbuilder as amb
 import matplotlib.pyplot as plt
-import shap
 from pycaret.regression import *
 from pycaret.utils import check_metric
 
@@ -132,55 +131,7 @@ def model_development(workingData, target_att, modelType, transformTarget, model
     evaluationData.to_csv(modellingDataPath + 'Evaluation_Data.csv', index=False, )
     return
 
-def model_explainability(evaluationData, target_att, modelType, projectName, modellingModelPath):
-    st.title('AutoML ' + modelType + ' - Explainability')
-    explainData = evaluationData.copy()
-    explainData.drop([target_att], axis=1, inplace=True)
 
-    saved_model = load_model(modellingModelPath+projectName+'_finalised_model')
-    train_pipe = saved_model[:-1].transform(explainData)
-
-    numRows = train_pipe[train_pipe.columns[0]].count()
-    numRows.item()
-
-    if numRows <= 50:
-        maximumRows = numRows
-    else:
-        maximumRows = 50
-    maximumRows = getattr(maximumRows, "tolist", lambda: maximumRows)()
-    data_idx = 0
-
-    try:
-        explainer = shap.TreeExplainer(saved_model.named_steps["trained_model"])
-        shap_values = explainer.shap_values(X=train_pipe.iloc[0:maximumRows, :])
-
-        amb.st_shap(shap.force_plot(explainer.expected_value, shap_values[data_idx, :], train_pipe.iloc[data_idx, :]))
-        data_idx = st.slider('Select instance to view from the Unseen Data predictions', 0, maximumRows)
-
-        amb.st_shap(shap.force_plot(explainer.expected_value, shap_values, train_pipe), height=400)
-
-        shap_values = explainer.shap_values(X=train_pipe)
-        st.set_option('deprecation.showPyplotGlobalUse', False)
-        st.pyplot(shap.summary_plot(shap_values, train_pipe))
-        st.pyplot(shap.summary_plot(shap_values, train_pipe, plot_type='bar'))
-
-    except:
-        print('Unable to create TreeExplainer SHAP explainability report')
-        try:
-            ex = shap.KernelExplainer(saved_model.named_steps["trained_model"].predict, train_pipe)
-            shap_values = ex.shap_values(train_pipe.iloc[0:maximumRows, :])
-
-
-            data_idx = st.slider('Select instance to view from the Unseen Data predictions', 0, maximumRows, key='kernel_slider')
-            amb.st_shap(shap.force_plot(ex.expected_value, shap_values, train_pipe.iloc[data_idx, :]))
-
-            shap_values = ex.shap_values(X=train_pipe)
-            st.set_option('deprecation.showPyplotGlobalUse', False)
-            st.pyplot(shap.summary_plot(shap_values, train_pipe))
-            st.pyplot(shap.summary_plot(shap_values, train_pipe, plot_type='bar'))
-        except:
-            st.markdown('Unable to create SHAP explainability report')
-    return
 target_att = None
 
 def app():
@@ -198,5 +149,4 @@ def app():
                                        modellingDataPath, modellingModelPath)
 
     plt.clf()
-    #model_explainability(evaluationData, target_att, modelType, projectName, modellingModelPath)
 

@@ -70,7 +70,6 @@ def app():
     target_att = st.session_state['target_att']
     projectName = st.session_state['projectName']
     modellingModelPath = st.session_state['modellingModelPath']
-    modellingReportsPath = st.session_state['modellingReportsPath']
     modellingDataPath = st.session_state['modellingDataPath']
 
     evaluationData = pd.read_csv(modellingDataPath + 'Evaluation_Data.csv')

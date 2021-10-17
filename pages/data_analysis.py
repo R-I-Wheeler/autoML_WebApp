@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import numpy as np
-from scipy import stats
 
 import automlbuilder as amb
 
@@ -76,10 +75,7 @@ def data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess
 def app():
     modelType = st.session_state['modelType']
     target_att = st.session_state['target_att']
-    projectName = st.session_state['projectName']
     dataPath = st.session_state['dataPath']
-    modellingModelPath = st.session_state['modellingModelPath']
-    modellingReportsPath = st.session_state['modellingReportsPath']
     modellingDataPath = st.session_state['modellingDataPath']
     analysisReportsPath = st.session_state['analysisReportsPath']
     analysisPlotsPath = st.session_state['analysisPlotsPath']

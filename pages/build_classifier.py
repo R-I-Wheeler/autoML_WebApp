@@ -2,7 +2,6 @@ import streamlit as st
 import streamlit.components.v1 as components
 import automlbuilder as amb
 import matplotlib.pyplot as plt
-import shap
 
 from pycaret.classification import *
 from pycaret.utils import check_metric
@@ -148,7 +147,6 @@ def app():
     modelType = st.session_state['modelType']
     target_att = st.session_state['target_att']
     projectName = st.session_state['projectName']
-    dataPath = st.session_state['dataPath']
     modellingModelPath = st.session_state['modellingModelPath']
     modellingReportsPath = st.session_state['modellingReportsPath']
     modellingDataPath = st.session_state['modellingDataPath']
