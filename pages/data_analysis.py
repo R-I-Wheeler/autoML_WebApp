@@ -6,6 +6,7 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import numpy as np
 
+
 import automlbuilder as amb
 
 def data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess, pp_report, ppReportSuccess, plotsPath, modellingDataPath):
@@ -51,25 +52,29 @@ def data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess
         outlierSelect = st.radio('Remove Outliers from numeric data',('Yes','No'), index=1)
         submitted = st.form_submit_button("Submit")
         if submitted:
+            editedData = workingData.copy()
             if dropSelect != None:
-                workingData.drop(dropSelect, axis=1, inplace=True)
+                editedData.drop(dropSelect, axis=1, inplace=True)
             if normaliseSelect != None:
                 for col in normaliseSelect:
-                    if is_numeric_dtype(workingData[col]):
+                    if is_numeric_dtype(editedData[col]):
                         if col == target_att:
                             transformTarget = True
                         else:
-                            workingData[col] = np.log1p(workingData[col])
+                            editedData[col] = np.log1p(workingData[col])
+                st.pyplot(plt = editedData.hist(bins=50, figsize=(15, 15)))
+
             if dummySelect != None:
                 for col in dummySelect:
-                    if is_numeric_dtype(workingData[col]) == False:
-                        workingData = pd.get_dummies(workingData, columns=[col])
+                    if is_numeric_dtype(editedData[col]) == False:
+                        editedData = pd.get_dummies(editedData, columns=[col])
             if outlierSelect == 'Yes':
-                amb.drop_numerical_outliers(workingData)
+                amb.drop_numerical_outliers(editedData)
             st.markdown('## Dataset')
-            st.dataframe(workingData.astype('object'))
-
-    workingData.to_csv(modellingDataPath+'Modelling_Data.csv', index=False,)
+            st.dataframe(editedData.astype('object'))
+            editedData.to_csv(modellingDataPath + 'Modelling_Data.csv', index=False, )
+        else:
+            workingData.to_csv(modellingDataPath+'Modelling_Data.csv', index=False,)
     return (workingData, transformTarget)
 
 def app():

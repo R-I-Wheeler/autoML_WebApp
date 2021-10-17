@@ -2,8 +2,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 import numpy as np
 import pandas as pd
-from autoviz.AutoViz_Class import AutoViz_Class
-AV = AutoViz_Class()
+#from autoviz.AutoViz_Class import AutoViz_Class
+#AV = AutoViz_Class()
 import sweetviz as sv
 from pandas_profiling import ProfileReport
 import klib
