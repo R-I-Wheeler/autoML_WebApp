@@ -7,11 +7,10 @@ from pycaret.classification import *
 from pycaret.utils import check_metric
 
 
-def setup_model(trainingData, target_att):
+def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, combineLevels):
 
-    envSetup = setup(data=trainingData, target=target_att, session_id=42, feature_selection=True,
-                     combine_rare_levels=True, silent=True)
-
+    envSetup = setup(data=trainingData, target=target_att, session_id=42, normalize=activateNormalise, normalize_method=normaliseMethod, transformation=activateTransform, transformation_method=transformMethod,
+                         combine_rare_levels=combineLevels, silent=True)
     environmentData = pull(True)
     best_model = compare_models()
     modelComparison = pull(True)
@@ -21,6 +20,7 @@ def setup_model(trainingData, target_att):
 
 
 def build_model(ensembleSelect, metricSelect, numEstimators, numIterations, modelChange):
+
     model = create_model(modelChange)
     if ensembleSelect != 'None':
         tuned_model = ensemble_model(model, method=ensembleSelect, optimize=metricSelect, choose_better=True,
@@ -50,8 +50,49 @@ def model_analysis_charts(model, modelType):
 def model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath, modellingModelPath):
 
     st.title('AutoML '+modelType+' - Modelling')
+
+    activateNormalise = st.session_state.activateNormalise
+    normaliseMethod = st.session_state.normaliseMethod
+    activateTransform = st.session_state.activateTransform
+    transformMethod = st.session_state.transformMethod
+    combineLevels = st.session_state.combineLevels
+
+    with st.form('environment_config'):
+        st.markdown('## AutoML Environment Configuration')
+        st.markdown('### Normalise Data')
+        st.markdown('Transforms numeric features by scaling them to a specific range')
+        normaliseMethod = st.selectbox('Select normalisation method to be used...',
+                                       ('none', 'zscore', 'minmax', 'maxabs', 'robust'), 0)
+        st.markdown('### Transform Data')
+        st.markdown('Makes the data more Gaussian, normalising the distribution. Does not include the target attribute')
+        transformMethod = st.selectbox('Select transform method to be used...',
+                                       ('none', 'yeo-johnson', 'quantile'), 0)
+        st.markdown('### Combine Rare Levels')
+        st.markdown('Categorical features are combined when there frequency is below 10%')
+        combineSelect = st.radio('Activate "Combine Rare Levels', ('Yes', 'No'), index=0)
+        submitted = st.form_submit_button("Submit")
+
+        if normaliseMethod != 'none':
+            activateNormalise = True
+        else:
+            activateNormalise = False
+            normaliseMethod = 'zscore'
+        if transformMethod != 'none':
+            activateTransform = True
+        else:
+            activateTransform = False
+            transformMethod = 'yeo-johnson'
+        if combineSelect != 'Yes':
+            combineLevels = False
+
+    st.session_state.activateNormalise = activateNormalise
+    st.session_state.normaliseMethod = normaliseMethod
+    st.session_state.activateTransform = activateTransform
+    st.session_state.transformMethod = transformMethod
+    st.session_state.combineLevels = combineLevels
+
     trainingData, evaluationData = amb.setup_modelling_data(workingData)
-    best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att)
+    best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, combineLevels)
 
 
     st.markdown ('### Training Data')

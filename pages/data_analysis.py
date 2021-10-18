@@ -38,7 +38,6 @@ def data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess
     st.image(img,use_column_width=True)
     plt.close()
 
-    transformTarget = False
     with st.form('drop_columns'):
         st.markdown('## Data Configurator')
         st.markdown('#### Select columns to drop from dataset...')
@@ -46,6 +45,7 @@ def data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess
         dataColumns.remove(target_att)
         dropSelect = st.multiselect('Select columns...',dataColumns, key='drop_Columns')
         dataColumns = list(workingData.columns)
+        dataColumns.remove(target_att)
         st.markdown('#### Select columns to apply log transformation (numeric only)...')
         normaliseSelect = st.multiselect('Select columns...', dataColumns, key='normalise_Columns')
         st.markdown('#### Encode categorical data columns...')
@@ -59,9 +59,6 @@ def data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess
             if normaliseSelect != None:
                 for col in normaliseSelect:
                     if is_numeric_dtype(editedData[col]):
-                        if col == target_att:
-                            st.session_state['transformTarget'] = True
-                        else:
                             st.write (col +' skew = '+str(workingData[col].skew()))
                             fig, ax = plt.subplots()
                             ax = sns.distplot(workingData[col], fit=norm)

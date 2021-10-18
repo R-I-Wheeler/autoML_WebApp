@@ -33,8 +33,8 @@ def model_explainability(evaluationData, target_att, modelType, projectName, mod
         explainer = shap.TreeExplainer(saved_model.named_steps["trained_model"])
         shap_values = explainer.shap_values(X=train_pipe.iloc[0:maximumRows, :])
 
-        data_idx = st.slider('Select instance to view from the Unseen Data predictions', 0, maximumRows)
         amb.st_shap(shap.force_plot(explainer.expected_value, shap_values[data_idx, :], train_pipe.iloc[data_idx, :]))
+        data_idx = st.slider('Select instance to view from the Unseen Data predictions', 0, maximumRows)
 
         amb.st_shap(shap.force_plot(explainer.expected_value, shap_values, train_pipe), height=400)
 
@@ -52,8 +52,9 @@ def model_explainability(evaluationData, target_att, modelType, projectName, mod
             shap_values = ex.shap_values(train_pipe.iloc[0:maximumRows, :])
 
             if modelType != 'Classification':
-                data_idx = st.slider('Select instance to view from the Unseen Data predictions', 0, maximumRows, key='kernel_slider')
                 amb.st_shap(shap.force_plot(ex.expected_value, shap_values, train_pipe.iloc[data_idx, :]))
+                data_idx = st.slider('Select instance to view from the Unseen Data predictions', 0, maximumRows,
+                                         key='kernel_slider')
 
             shap_values = ex.shap_values(X=train_pipe)
             st.set_option('deprecation.showPyplotGlobalUse', False)

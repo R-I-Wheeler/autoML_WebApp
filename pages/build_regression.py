@@ -6,13 +6,10 @@ from pycaret.regression import *
 from pycaret.utils import check_metric
 
 
-def setup_model(trainingData, target_att, transformTarget):
-    if transformTarget == False:
-        envSetup = setup(data=trainingData, target=target_att, session_id=42, feature_selection=True,
-                         combine_rare_levels=True, silent=True)
-    else:
-        envSetup = setup(data=trainingData, target=target_att, session_id=42, feature_selection=True,
-                         transform_target=True, combine_rare_levels=True, silent=True)
+def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod,  targetTransform, targetMethod, combineLevels):
+
+    envSetup = setup(data=trainingData, target=target_att, session_id=42, normalize=activateNormalise, normalize_method=normaliseMethod, transformation=activateTransform, transformation_method=transformMethod,
+                         transform_target=targetTransform, transform_target_method=targetMethod, combine_rare_levels=combineLevels, silent=True)
     environmentData = pull(True)
     best_model = compare_models()
     modelComparison = pull(True)
@@ -45,13 +42,66 @@ def model_analysis_charts(model):
         plot_model(model, plot='learning', display_format='streamlit')
     return
 
-def model_development(workingData, target_att, modelType, transformTarget, modellingReportsPath, projectName, modellingDataPath,
+def model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath,
                       modellingModelPath):
 
     st.title('AutoML '+modelType+' - Modelling')
-    trainingData, evaluationData = amb.setup_modelling_data(workingData)
-    best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att, transformTarget)
 
+    activateNormalise = st.session_state.activateNormalise
+    normaliseMethod = st.session_state.normaliseMethod
+    activateTransform = st.session_state.activateTransform
+    transformMethod = st.session_state.transformMethod
+    targetTransform = st.session_state.targetTransform
+    targetMethod = st.session_state.targetMethod
+    combineLevels = st.session_state.combineLevels
+
+    with st.form ('environment_config'):
+        st.markdown('## AutoML Environment Configuration')
+        st.markdown('### Normalise Data')
+        st.markdown('Transforms numeric features by scaling them to a specific range')
+        normaliseMethod = st.selectbox('Select normalisation method to be used...',
+                                       ('none', 'zscore', 'minmax', 'maxabs','robust'),0)
+        st.markdown('### Transform Data')
+        st.markdown('Makes the data more Gaussian, normalising the distribution. Does not include the target attribute')
+        transformMethod = st.selectbox('Select transform method to be used...',
+                                       ('none', 'yeo-johnson', 'quantile'), 0)
+        st.markdown('### Transform Target')
+        st.markdown('Transform the target attribute')
+        targetMethod = st.selectbox('Select transform method to be used...',
+                                       ('none', 'yeo-johnson', 'box-cox'), 0)
+        st.markdown('### Combine Rare Levels')
+        st.markdown('Categorical features are combined when there frequency is below 10%')
+        combineSelect = st.radio('Activate "Combine Rare Levels', ('Yes', 'No'), index=0)
+        submitted = st.form_submit_button("Submit")
+
+        if normaliseMethod != 'none':
+            activateNormalise = True
+        else:
+            activateNormalise = False
+            normaliseMethod = 'zscore'
+        if transformMethod != 'none':
+            activateTransform = True
+        else:
+            activateTransform = False
+            transformMethod = 'yeo-johnson'
+        if targetMethod != 'none':
+            targetTransform = True
+        else:
+            targetTransform = False
+            targetMethod = 'box-cox'
+        if combineSelect != 'Yes':
+            combineLevels = False
+
+    st.session_state.activateNormalise = activateNormalise
+    st.session_state.normaliseMethod = normaliseMethod
+    st.session_state.activateTransform = activateTransform
+    st.session_state.transformMethod = transformMethod
+    st.session_state.targetTransform = targetTransform
+    st.session_state.targetMethod = targetMethod
+    st.session_state.combineLevels = combineLevels
+
+    trainingData, evaluationData = amb.setup_modelling_data(workingData)
+    best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod,  targetTransform, targetMethod, combineLevels)
 
     st.markdown ('### Training Data')
     train = get_config('X_train')
@@ -70,7 +120,6 @@ def model_development(workingData, target_att, modelType, transformTarget, model
             components.html(source_code, height=1000, scrolling=True)
         except:
             st.write('Unable to display comparison report at this time')
-
 
     st.markdown('### AutoML Environment')
     st.dataframe(environmentData)
@@ -141,12 +190,10 @@ def app():
     modellingModelPath = st.session_state['modellingModelPath']
     modellingReportsPath = st.session_state['modellingReportsPath']
     modellingDataPath = st.session_state['modellingDataPath']
-    transformTarget = st.session_state['transformTarget']
-
 
     workingData = pd.read_csv(modellingDataPath + 'Modelling_Data.csv')
 
-    model_development(workingData, target_att, modelType, transformTarget, modellingReportsPath, projectName,
+    model_development(workingData, target_att, modelType, modellingReportsPath, projectName,
                                        modellingDataPath, modellingModelPath)
 
     plt.clf()
