@@ -34,7 +34,7 @@ def build_model(ensembleSelect, metricSelect, numEstimators, numIterations, mode
 def model_analysis_charts(model, modelType):
     modelAnalysis = st.selectbox('Select model analysis plot:', ('Confusion Matrix', 'Classification Report',
                                                                  'Class Prediction Error', 'Learning Curve',
-                                                                 'Area Under the Curve'))
+                                                                 'Area Under the Curve', 'Parameters'))
     if modelAnalysis == 'Confusion Matrix':
         plot_model(model, plot='confusion_matrix', display_format='streamlit')
     elif modelAnalysis == 'Classification Report':
@@ -45,12 +45,18 @@ def model_analysis_charts(model, modelType):
         plot_model(model, plot='learning', display_format='streamlit')
     elif modelAnalysis == 'Area Under the Curve':
         plot_model(model, plot='auc', display_format='streamlit')
+    elif modelAnalysis == 'parameter':
+        plot_model(model, plot='parameter', display_format='streamlit')
     return
 
 def model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath, modellingModelPath):
 
     st.title('AutoML '+modelType+' - Modelling')
-
+    st.markdown(
+        'The data from "Data Analysis" will now be used to develop a machine learning model. The data will first be split, 90% will be used for training and testing the model (split again 70/30) and 10% will be kept back as unseen data.')
+    st.markdown(
+        'You may find that the number of attributes within the datset has increased, this is because during the setup of the modelling environment the dataset has been analysed and further categorical encoding may have taken place.')
+    st.markdown('If you were to use the model developed in this application you would need to use data in the same configuration as outputted at the end of the Data Analysis')
     activateNormalise = st.session_state.activateNormalise
     normaliseMethod = st.session_state.normaliseMethod
     activateTransform = st.session_state.activateTransform
@@ -59,8 +65,17 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
     with st.form('environment_config'):
         st.markdown('## AutoML Environment Configuration')
+        st.markdown(
+            'This section allows you to make further configuration changes to your modelling environment, on completion the setup will run again.')
         st.markdown('### Normalise Data')
-        st.markdown('Transforms numeric features by scaling them to a specific range')
+        st.markdown('Transforms all numeric attributes by scaling them to a specific range')
+        st.markdown('You may select from the following normalisation methods, Z-Score, MinMax, MaxAbs and Robust')
+        st.markdown(
+            'Z-Score - Calculates the mean of each attribute and then scales the values so that any value equal to the mean is normalised to 0, a value below the mean becomes a negative number and a value above the mean becomes a positive number')
+        st.markdown('MinMax - Scales and translates each attribute to a range between 0 and 1')
+        st.markdown(
+            'MaxAbs - Scales and translates each attribute so that the maximal absolute value of the attribute will be 1.0')
+        st.markdown('Robust - scales and translates each attribute according to its Interquartile range')
         normaliseMethod = st.selectbox('Select normalisation method to be used...',
                                        ('none', 'zscore', 'minmax', 'maxabs', 'robust'), 0)
         st.markdown('### Transform Data')
@@ -94,12 +109,17 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     trainingData, evaluationData = amb.setup_modelling_data(workingData)
     best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, combineLevels)
 
+    st.markdown('### AutoML Environment')
+    st.markdown('Table showing the configuration of the modelling environment')
+    st.dataframe(environmentData)
 
     st.markdown ('### Training Data')
+    st.markdown('The training data created during the environment setup to be used for developing the model.')
     train = get_config('X_train')
     st.dataframe(train)
 
     st.markdown ('### Training & Test Data Comparison')
+    st.markdown('A Sweetviz report comparing the data that will be used for training and testing during model development')
     training_report = amb.generate_sv(train, '', 'TrainingData',test, True,modellingReportsPath)
     try:
         components.html(training_report, width=1000, height=1000, scrolling=True)
@@ -113,11 +133,9 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         except:
             st.write('Unable to display comparison report at this time')
 
-
-    st.markdown('### AutoML Environment')
-    st.dataframe(environmentData)
-
     st.markdown('### Model Comparison')
+    st.markdown('A comparison table to evaluate all of the models that have been trained and tested')
+    st.markdown('All models within the model library were trained with scores generated using stratified cross validation for metric evaluation')
     st.dataframe(modelComparison)
 
     with st.form('model_config'):
@@ -132,6 +150,9 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.markdown('### Change Model')
         modelChange = st.selectbox('Select model to be used...', modelList)
         st.markdown('### Use Ensemble Model')
+        st.markdown('Ensembling model is a common technique used for improving performance of a model')
+        st.markdown('Bagging - is a machine learning ensemble meta-algorithm designed to improve stability and accuracy of machine learning algorithms. It also reduces variance and helps to avoid overfitting.')
+        st.markdown('Boosting - is an ensemble meta-algorithm used primarily for reducing bias and variance in supervised learning. ')
         ensembleSelect = st.radio('Select Ensemble type',('None','Bagging','Boosting'), index=0)
         if ensembleSelect != 'None':
             numEstimators = st.slider('Increase number of estimators used...',10,500, step=10)
@@ -155,9 +176,11 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.write(tunedModel)
 
     st.markdown ('### Model Tuning Results')
+    st.markdown('Shows the performance scores from training and testing the model whilst tuning for each fold')
     st.write(tuningData)
 
     st.markdown ('### Model Analysis')
+    st.markdown ('Selection of plots to be used to evaluate the model')
     model_analysis_charts(tunedModel, modelType)
 
     finalModel = finalize_model(tunedModel)
@@ -173,13 +196,17 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.pyplot(amb.prediction_confusion_matrix(unseen_predictions, target_att))
     except:
         st.write('This function is only available for binary classification')
+
     st.markdown('#### Model accuracy on unseen data = '+str(accuracy * 100)+'%')
 
     save_model(finalModel, modellingModelPath+projectName+'_finalised_model')
 
     st.markdown('### Unseen Data Predictions')
+    st.markdown('The following table shows the unseen data and the predictions made by the final model')
+    st.markdown('The predicted value is in the column headed "label", the column headed "score" contains the probability of a positive outcome')
     st.dataframe(unseen_predictions.astype('object'))
 
+    unseen_predictions.to_csv(modellingDataPath + 'UnseenPredictions.csv', index=False, )
     evaluationData.to_csv(modellingDataPath + 'Evaluation_Data.csv', index=False, )
     return
 

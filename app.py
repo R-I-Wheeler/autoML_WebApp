@@ -51,11 +51,17 @@ def initiate_application_cache(modelType, target_att, projectName, dataPath, mod
 def main():
     # Title of the main page
     st.title("AutoML Model Builder")
+    st.markdown('The "AutoML Model Builder" uses an open source machine learning library (PyCaret) to develop machine learning models within this no-code web application.')
+    st.markdown('From this application you can load data (csv files only at the moment), perform data analysis, develop either classification or regression machine learning models and then analyse your models performance. All of the data, reports and visualisations created by this application are then saved into a project folder which can then be used for further development.')
+    st.markdown('In the sidebar opposite upload your data, give your project a name, select the model type you wish to develop along with the target attribute that your model will use.')
+    st.markdown('Once you have completed the setup the CSV file is saved to the project folder and the dataset is then cleaned by removing any attributes that contain all unique values such as ID columns or index columns, drops empty and single valued attributes as well as empty and duplicate rows of data and standardises the attribute names.')
+    st.markdown('The cleaned dataset is then saved separately from the original data and will be used for analysis and modelling.')
 
     st.sidebar.header("Project Setup")
     uploaded_file = st.sidebar.file_uploader("Choose a csv file", type='csv')
     if uploaded_file is not None:
-        workingData = pd.read_csv(uploaded_file)
+        uploadData = pd.read_csv(uploaded_file)
+        workingData = uploadData.copy()
         projectName = st.sidebar.text_input('Name Project...', 'myProject')
         modelType = st.sidebar.selectbox('Select Model Type:', ('Classification', 'Regression'))
         workingData = amb.clean_data(workingData)
@@ -70,7 +76,8 @@ def main():
                 workingData[target_att] = workingData[target_att].astype('int32')
         analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath = amb.generate_working_directories(projectName)
 
-        workingData.to_csv(dataPath + 'Original_Data.csv', index=False)
+        uploadData.to_csv(dataPath + 'Original_Data.csv', index=False)
+        workingData.to_csv(dataPath + 'Clean_Data.csv', index=False)
 
         initiate_application_cache(modelType, target_att, projectName, dataPath, modellingModelPath,
                                    modellingReportsPath, modellingDataPath, analysisReportsPath, analysisPlotsPath)

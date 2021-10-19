@@ -210,27 +210,25 @@ def gen_boxplots(workingdata, file=None):
 #    workingData = AV.AutoViz(filename='', dfte=workingData, depVar=target_att, verbose=2, chart_format='jpg')
 #    return workingData
 
-#@st.cache(allow_output_mutation=True)
-#def generate_distPlot(workingData, target_att):
-#    cols = workingData.select_dtypes([np.number]).columns
-#    for col in cols:
-#        distplot = klib.dist_plot(workingData[col])
-#        if distplot != None:
-#            distplot.figure.savefig('./AutoViz_Plots/'+target_att+'/'+col+'_Distribution_Plot.png', dpi=100)
-#    catplot = klib.cat_plot(workingData, figsize=(30, 30))
-#    if catplot != None:
-#        catplot.figure.savefig('./AutoViz_Plots/' + target_att + '/Categorical_Plot.png', dpi=100)
-#    plt.clf()
-#    plt.cla()
-#    return
+@st.cache(allow_output_mutation=True)
+def generate_distPlot(workingData, target_att, analysisPlotsPath):
+    cols = workingData.select_dtypes([np.number]).columns
+    for col in cols:
+        distplot = klib.dist_plot(workingData[col])
+        if distplot != None:
+            distplot.figure.savefig(analysisPlotsPath+'/Distribution_Plot__'+col+'.png', dpi=100)
+    catplot = klib.cat_plot(workingData, figsize=(30, 30))
+    if catplot != None:
+        catplot.figure.savefig('./AutoViz_Plots/' + target_att + '_Categorical_Plot.png', dpi=100)
+    plt.clf()
+    plt.cla()
+    return
 
-def drop_numerical_outliers(df, z_thresh=3):
+def drop_numerical_outliers(workingData, z_thresh=3):
     # Constrains will contain `True` or `False` depending on if it is a value below the threshold.
-    constrains = df.select_dtypes(include=[np.number]) \
-        .apply(lambda x: np.abs(stats.zscore(x)) < z_thresh) \
-        .all(axis=1)
+    constrains = workingData.select_dtypes(include=[np.number]).apply(lambda x: np.abs(stats.zscore(x)) < z_thresh).all(axis=1)
     # Drop (inplace) values set to be rejected
-    df.drop(df.index[~constrains], inplace=True)
+    workingData.drop(workingData.index[~constrains], inplace=True)
 
 def setup_modelling_data(workingData):
     # Split dataset, 90% for modelling, 10% unseen prediction
