@@ -58,7 +58,7 @@ def model_explainability(unseen_predictions, evaluationData, target_att, modelTy
             ex = shap.KernelExplainer(saved_model.named_steps["trained_model"].predict, train_pipe)
             shap_values = ex.shap_values(train_pipe.iloc[0:maximumRows, :])
 
-            if modelType != 'Classification':
+            if modelType == 'Regression':
                 st.markdown(
                     'The folowing shows how each of the features contributes to push the model output from the base value, the average model output over the entire training dataset used to develop the model, to the predicted output of the selected instance of the unseen data.')
                 st.markdown(

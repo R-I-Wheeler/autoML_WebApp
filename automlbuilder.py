@@ -219,7 +219,7 @@ def generate_distPlot(workingData, target_att, analysisPlotsPath):
             distplot.figure.savefig(analysisPlotsPath+'/Distribution_Plot__'+col+'.png', dpi=100)
     catplot = klib.cat_plot(workingData, figsize=(30, 30))
     if catplot != None:
-        catplot.figure.savefig('./AutoViz_Plots/' + target_att + '_Categorical_Plot.png', dpi=100)
+        catplot.figure.savefig(analysisPlotsPath+'/Categorical_Data.png', dpi=100)
     plt.clf()
     plt.cla()
     return
