@@ -88,7 +88,7 @@ def clean_data(allData):
     workingData = workingData.applymap(lambda s: s.upper() if type(s) == str else s)
     return workingData
 
-@st.cache
+
 def half_masked_corr_heatmap(workingdata, file=None):
     plt.figure(figsize=(10,10))
     sns.set(font_scale=1)
@@ -104,7 +104,7 @@ def half_masked_corr_heatmap(workingdata, file=None):
     if file: plt.savefig(file, bbox_inches='tight')
     return
 
-@st.cache
+
 def gen_scatterplots(workingdata, target_column, file=None):
     plotData = workingdata.copy()
     dataColumns = list(plotData.columns)
@@ -140,7 +140,7 @@ def gen_scatterplots(workingdata, target_column, file=None):
     plt.show()
     return
 
-@st.cache
+
 def gen_histograms(workingdata, file=None):
     cols=2
     rows = math.ceil(len(workingdata.columns)/cols)
@@ -167,7 +167,7 @@ def gen_histograms(workingdata, file=None):
 
     return
 
-@st.cache
+
 def gen_boxplots(workingdata, file=None):
     plotData = workingdata.copy()
     dataColumns = list(plotData.columns)
@@ -210,7 +210,7 @@ def gen_boxplots(workingdata, file=None):
 #    workingData = AV.AutoViz(filename='', dfte=workingData, depVar=target_att, verbose=2, chart_format='jpg')
 #    return workingData
 
-@st.cache(allow_output_mutation=True)
+
 def generate_distPlot(workingData, target_att, analysisPlotsPath):
     cols = workingData.select_dtypes([np.number]).columns
     for col in cols:

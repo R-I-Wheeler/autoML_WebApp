@@ -190,6 +190,10 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
     st.markdown ('### Best Model (Tuned)')
     st.write(tunedModel)
+    file = open(modellingModelPath + "model_description.txt", "w")
+    model_desc = repr(tunedModel)
+    file.write(model_desc + "\n")
+    file.close()
 
     st.markdown ('### Model Tuning Results')
     st.markdown('Shows the performance scores from training and testing the model whilst tuning for each fold')
