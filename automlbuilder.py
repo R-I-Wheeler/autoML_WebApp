@@ -267,13 +267,17 @@ def generate_working_directories(projectName):
     modellingDataPath = './' + projectName + '/modelling/data/'
     modellingReportsPath = './' + projectName + '/modelling/reports/'
     modellingModelPath = './' + projectName + '/modelling/model/'
+    modellingAnalysisPath = './' + projectName + '/modelling/analysis/'
+    explainabilityPath = './' + projectName + '/explainability/'
     create_directory(dataPath)
     create_directory(analysisPlotsPath)
     create_directory(analysisReportsPath)
     create_directory(modellingDataPath)
     create_directory(modellingReportsPath)
     create_directory(modellingModelPath)
-    return analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath
+    create_directory(modellingAnalysisPath)
+    create_directory(explainabilityPath)
+    return analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath, modellingAnalysisPath, explainabilityPath
 
 def st_shap(plot, height=None):
     shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"

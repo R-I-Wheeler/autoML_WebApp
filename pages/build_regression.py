@@ -2,6 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 import automlbuilder as amb
 import matplotlib.pyplot as plt
+import os
+import shutil
+
 from pycaret.regression import *
 from pycaret.utils import check_metric
 
@@ -44,8 +47,22 @@ def model_analysis_charts(model):
         plot_model(model, plot='parameter', display_format='streamlit')
     return
 
+def download_model_analysis_charts(model, modelType, modellingAnalysisPath):
+    plot_model(model, save=True, plot='residuals')
+    plot_model(model, save=True, plot='error')
+    plot_model(model, save = True, plot='vc')
+    plot_model(model, save = True, plot='learning')
+    plot_model(model, save = True, plot='parameter')
+    sourcepath = './'
+    sourcefiles = os.listdir(sourcepath)
+    destinationpath = modellingAnalysisPath
+    for file in sourcefiles:
+        if file.endswith('.png'):
+            shutil.move(os.path.join(sourcepath, file), os.path.join(destinationpath, file))
+    return
+
 def model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath,
-                      modellingModelPath):
+                      modellingModelPath, modellingAnalysisPath):
 
     st.title('AutoML '+modelType+' - Modelling')
     st.markdown('The data from "Data Analysis" will now be used to develop a machine learning model. The data will first be split, 90% will be used for training and testing the model (split again 70/30) and 10% will be kept back as unseen data.')
@@ -206,6 +223,15 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
     unseen_predictions.to_csv(modellingDataPath + 'UnseenPredictions.csv', index=False, )
     evaluationData.to_csv(modellingDataPath + 'Evaluation_Data.csv', index=False, )
+
+    st.markdown('##### Generate model analysis visualisations and download to project folder')
+    st.markdown('This may take a while to complete...')
+    if st.button('Download'):
+        my_bar = st.progress(0)
+        for percent_complete in range(100):
+            download_model_analysis_charts(tunedModel, modelType, modellingAnalysisPath)
+            my_bar.progress(percent_complete + 1)
+        st.markdown('Completed Download')
     return
 
 
@@ -218,11 +244,12 @@ def app():
     modellingModelPath = st.session_state['modellingModelPath']
     modellingReportsPath = st.session_state['modellingReportsPath']
     modellingDataPath = st.session_state['modellingDataPath']
+    modellingAnalysisPath = st.session_state['modellingAnalysisPath']
 
     workingData = pd.read_csv(modellingDataPath + 'Modelling_Data.csv')
 
     model_development(workingData, target_att, modelType, modellingReportsPath, projectName,
-                                       modellingDataPath, modellingModelPath)
+                                       modellingDataPath, modellingModelPath, modellingAnalysisPath)
 
     plt.clf()
 

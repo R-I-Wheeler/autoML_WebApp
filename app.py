@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import automlbuilder as amb
+import base64
+import shutil
 
 # Custom imports
 from multipage import MultiPage
@@ -9,7 +11,7 @@ from pages import data_analysis, build_classifier, build_regression, explainabil
 # Create an instance of the app
 app = MultiPage()
 
-def initiate_application_cache(modelType, target_att, projectName, dataPath, modellingModelPath, modellingReportsPath, modellingDataPath, analysisReportsPath, analysisPlotsPath):
+def initiate_application_cache(modelType, target_att, projectName, dataPath, modellingModelPath, modellingReportsPath, modellingDataPath, analysisReportsPath, analysisPlotsPath, modellingAnalysisPath, explainabilityPath):
     if 'modelType' not in st.session_state:
         st.session_state['modelType'] = modelType
     if 'target_att' not in st.session_state:
@@ -28,6 +30,12 @@ def initiate_application_cache(modelType, target_att, projectName, dataPath, mod
         st.session_state['analysisReportsPath'] = analysisReportsPath
     if 'analysisPlotsPath' not in st.session_state:
         st.session_state['analysisPlotsPath'] = analysisPlotsPath
+    if 'modellingAnalysisPath' not in st.session_state:
+        st.session_state['modellingAnalysisPath'] = modellingAnalysisPath
+    if 'explainabilityPath' not in st.session_state:
+        st.session_state['explainabilityPath'] = explainabilityPath
+
+
     if 'transformTarget' not in st.session_state:
         st.session_state['transformTarget'] = False
     if 'dataEdited' not in st.session_state:
@@ -47,6 +55,7 @@ def initiate_application_cache(modelType, target_att, projectName, dataPath, mod
         st.session_state['targetMethod'] = 'box-cox'
     if 'combineLevels' not in st.session_state:
         st.session_state['combineLevels'] = True
+
 
 def main():
     # Title of the main page
@@ -74,13 +83,14 @@ def main():
         else:
             if modelType == 'Classification':
                 workingData[target_att] = workingData[target_att].astype('int32')
-        analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath = amb.generate_working_directories(projectName)
+        analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath, modellingAnalysisPath, explainabilityPath = amb.generate_working_directories(projectName)
 
         uploadData.to_csv(dataPath + 'Original_Data.csv', index=False)
         workingData.to_csv(dataPath + 'Clean_Data.csv', index=False)
 
         initiate_application_cache(modelType, target_att, projectName, dataPath, modellingModelPath,
-                                   modellingReportsPath, modellingDataPath, analysisReportsPath, analysisPlotsPath)
+                                   modellingReportsPath, modellingDataPath, analysisReportsPath, analysisPlotsPath, modellingAnalysisPath, explainabilityPath)
+        #st.sidebar.markdown('##### Download Project Folder')
 
         # Add all your applications (pages) here
         app.add_page("Data Analysis", data_analysis.app)

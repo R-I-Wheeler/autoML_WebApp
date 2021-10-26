@@ -17,7 +17,7 @@ def data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess
     st.dataframe(workingData.astype('object'))
 
     st.markdown('## Data Report')
-    st.markdown('Two reports are generated using open source libraries, "Pandas Profiling" and "Sweetvix". These reports identify the statistics related to each of the attributes within the datset and the interactions and correlations between atrributes')
+    st.markdown('Two reports are generated using open source libraries, "Pandas Profiling" and "Sweetviz". These reports identify the statistics related to each of the attributes within the datset and the interactions and correlations between atrributes')
     dataReporting = st.selectbox('Select data report:', ('Pandas Profile','Sweetviz'), index=0)
     if dataReporting == 'Sweetviz':
         if svReportSuccess == True:
