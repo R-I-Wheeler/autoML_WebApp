@@ -86,7 +86,9 @@ def main():
         analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath, modellingAnalysisPath, explainabilityPath = amb.generate_working_directories(projectName)
 
         uploadData.to_csv(dataPath + 'Original_Data.csv', index=False)
+        amb.csv_to_html(uploadData,'#FF7B7B',dataPath, 'Original_Data.html')
         workingData.to_csv(dataPath + 'Clean_Data.csv', index=False)
+        amb.csv_to_html(workingData, '#519000', dataPath, 'Clean_Data.html')
 
         initiate_application_cache(modelType, target_att, projectName, dataPath, modellingModelPath,
                                    modellingReportsPath, modellingDataPath, analysisReportsPath, analysisPlotsPath, modellingAnalysisPath, explainabilityPath)

@@ -227,15 +227,14 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.dataframe(unseen_predictions.astype('object'))
 
     unseen_predictions.to_csv(modellingDataPath + 'UnseenPredictions.csv', index=False, )
+    amb.csv_to_html(unseen_predictions, '#B000FD', modellingDataPath, 'UnseenPredictions.html')
     evaluationData.to_csv(modellingDataPath + 'Evaluation_Data.csv', index=False, )
+    amb.csv_to_html(evaluationData, '#FD0000', modellingDataPath, 'Evaluation_Data.html')
 
     st.markdown('##### Generate model analysis visualisations and download to project folder')
     st.markdown('This may take a while to complete...')
     if st.button('Download'):
-        my_bar = st.progress(0)
-        for percent_complete in range (100):
-            download_model_analysis_charts(tunedModel, modelType, modellingAnalysisPath)
-            my_bar.progress(percent_complete + 1)
+        download_model_analysis_charts(tunedModel, modelType, modellingAnalysisPath)
         st.markdown('Completed Download')
     return
 

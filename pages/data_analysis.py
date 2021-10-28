@@ -86,9 +86,11 @@ def data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess
             st.markdown('## Updated Dataset')
             st.dataframe(editedData.astype('object'))
             editedData.to_csv(modellingDataPath + 'Modelling_Data.csv', index=False, )
+            amb.csv_to_html(editedData, '#0096FD', modellingDataPath, 'Modelling_Data.html')
             st.session_state.dataEdited = True
         else:
-             workingData.to_csv(modellingDataPath+'Modelling_Data.csv', index=False,)
+            workingData.to_csv(modellingDataPath+'Modelling_Data.csv', index=False,)
+            amb.csv_to_html(workingData, '#0096FD', modellingDataPath, 'Modelling_Data.html')
     return
 
 def app():

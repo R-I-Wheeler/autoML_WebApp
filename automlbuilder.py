@@ -35,7 +35,7 @@ def create_directory(path):
         print("The new directory is created!")
     return
 
-@st.cache
+
 def generate_sv(workingData, target_att, reportname, compareData, compare, reportsPath):
     try:
         if compare == False:
@@ -56,7 +56,7 @@ def generate_sv(workingData, target_att, reportname, compareData, compare, repor
         sv_report = None
     return sv_report, reportSuccess
 
-@st.cache
+
 def generate_pp(workingData, reportsPath):
     try:
         profile = ProfileReport(workingData, title="Data Profiling Report", explorative=True)
@@ -282,3 +282,11 @@ def generate_working_directories(projectName):
 def st_shap(plot, height=None):
     shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
     components.html(shap_html, height=height)
+
+def csv_to_html(df, th_colour, path, filename):
+    style_text = '<style>table {border-collapse: collapse;border-radius: 5px;box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);overflow: hidden;font-family: "Ariel", sans-serif;font-weight: bold;font-size: 14px;}th {background: '+th_colour+';color: #ffffff;text-align: left;}th,td {padding: 10px 20px;}tr:nth-child(even) {background: #eeeeee;}</style>\n'
+    out = df.to_html()
+    final = style_text + out
+    f = open(path+filename, "w")
+    f.write(final)
+    f.close()
