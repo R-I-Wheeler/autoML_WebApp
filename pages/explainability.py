@@ -1,14 +1,20 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import shap
 import matplotlib.pyplot as plt
 import os
 import shutil
+from pathlib import Path
 from pycaret.classification import load_model
 
 import automlbuilder as amb
 
-def download_explainability_charts(data_idx, evaluationData, projectName, modellingModelPath, explainabilityPath):
+def generate_explainability_charts(evaluationData, projectName, modellingModelPath, explainabilityPath):
+
+    instancePath = explainabilityPath+'Instance/'
+    amb.create_directory(instancePath+'Force/')
+    amb.create_directory(instancePath + 'Waterfall/')
 
     saved_model = load_model(modellingModelPath+projectName+'_finalised_model')
     train_pipe = saved_model[:-1].transform(evaluationData)
@@ -27,16 +33,24 @@ def download_explainability_charts(data_idx, evaluationData, projectName, modell
         shap_values = explainer.shap_values(X=train_pipe.iloc[0:maximumRows, :])
 
         try:
-            forcePlot = shap.force_plot(explainer.expected_value[1], shap_values[1][data_idx, :], train_pipe.iloc[data_idx, :], show=False)
-            shap.save_html('forcePlot_instance_'+str(data_idx)+'.html', forcePlot)
+            for data_idx in range(maximumRows):
+                forcePlot = shap.force_plot(explainer.expected_value[1], shap_values[1][data_idx, :], train_pipe.iloc[data_idx, :], show=False)
+                shap.save_html('forcePlot_instance_'+str(data_idx)+'.html', forcePlot)
         except Exception as e:
             print(e)
             try:
-                forcePlot = shap.force_plot(explainer.expected_value, shap_values[data_idx, :], train_pipe.iloc[data_idx, :], show=False)
-                shap.save_html('forcePlot_instance_'+str(data_idx)+'.html', forcePlot)
+                for data_idx in range(maximumRows):
+                    forcePlot = shap.force_plot(explainer.expected_value, shap_values[data_idx, :], train_pipe.iloc[data_idx, :], show=False)
+                    shap.save_html('forcePlot_instance_'+str(data_idx)+'.html', forcePlot)
             except Exception as e:
                 print(e)
                 print('Failed to create SHAP Force Plot')
+        sourcePath = './'
+        sourceFiles = os.listdir(sourcePath)
+        destinationPath = instancePath+'Force/'
+        for file in sourceFiles:
+            if file.endswith('.html'):
+                shutil.move(os.path.join(sourcePath, file), os.path.join(destinationPath, file))
         plt.close()
         try:
             explainAll = shap.force_plot(explainer.expected_value[1], shap_values[1], train_pipe)
@@ -53,7 +67,12 @@ def download_explainability_charts(data_idx, evaluationData, projectName, modell
         shap.summary_plot(shap_values, train_pipe, show=False)
         plt.savefig('Summary_Plot.png',format = "png",dpi = 150,bbox_inches = 'tight')
         plt.close()
-
+        sourcePath = './'
+        sourceFiles = os.listdir(sourcePath)
+        destinationPath = explainabilityPath
+        for file in sourceFiles:
+            if file.endswith('.png') or file.endswith('.html'):
+                shutil.move(os.path.join(sourcePath, file), os.path.join(destinationPath, file))
     except Exception as e:
         print(e)
         print('Unable to create TreeExplainer SHAP explainability files')
@@ -61,10 +80,16 @@ def download_explainability_charts(data_idx, evaluationData, projectName, modell
             explainer = shap.Explainer(saved_model.named_steps["trained_model"], train_pipe)
             shap_values = explainer(train_pipe)
 
-            shap.plots.waterfall(shap_values[data_idx], show=False)
-            plt.savefig('Instance_Waterfall_Plot.png',format = "png",dpi = 150,bbox_inches = 'tight')
-            plt.close()
-
+            for data_idx in range(maximumRows):
+                shap.plots.waterfall(shap_values[data_idx], show=False)
+                plt.savefig('Waterfall_Plot_Instance_'+str(data_idx)+'.png',format = "png",dpi = 150,bbox_inches = 'tight')
+                plt.close()
+            sourcePath = './'
+            sourceFiles = os.listdir(sourcePath)
+            destinationPath = instancePath+'Waterfall/'
+            for file in sourceFiles:
+                if file.endswith('.png'):
+                    shutil.move(os.path.join(sourcePath, file), os.path.join(destinationPath, file))
             shap.plots.beeswarm(shap_values, max_display=20, show=False)
             plt.savefig('Summary_Plot.png',format = "png",dpi = 150,bbox_inches = 'tight')
             plt.close()
@@ -72,7 +97,12 @@ def download_explainability_charts(data_idx, evaluationData, projectName, modell
             shap.plots.heatmap(shap_values, show=False)
             plt.savefig('Heatmap.png',format = "png",dpi = 150,bbox_inches = 'tight')
             plt.close()
-
+            sourcePath = './'
+            sourceFiles = os.listdir(sourcePath)
+            destinationPath = explainabilityPath
+            for file in sourceFiles:
+                if file.endswith('.png'):
+                    shutil.move(os.path.join(sourcePath, file), os.path.join(destinationPath, file))
         except Exception as e:
             print(e)
             print('Unable to create Explainer files')
@@ -80,9 +110,15 @@ def download_explainability_charts(data_idx, evaluationData, projectName, modell
                 ex = shap.KernelExplainer(saved_model.named_steps["trained_model"].predict, train_pipe)
                 shap_values = ex.shap_values(train_pipe.iloc[0, :])
 
-                forcePlot = shap.force_plot(ex.expected_value, shap_values, train_pipe.iloc[data_idx, :])
-                shap.save_html('forcePlot_instance_' + str(data_idx) + '.html', forcePlot)
-
+                for data_idx in range(maximumRows):
+                    forcePlot = shap.force_plot(ex.expected_value, shap_values, train_pipe.iloc[data_idx, :])
+                    shap.save_html('forcePlot_instance_' + str(data_idx) + '.html', forcePlot)
+                sourcePath = './'
+                sourceFiles = os.listdir(sourcePath)
+                destinationPath = instancePath+'Force/'
+                for file in sourceFiles:
+                    if file.endswith('.html'):
+                        shutil.move(os.path.join(sourcePath, file), os.path.join(destinationPath, file))
                 shap_values = ex.shap_values(X=train_pipe)
                 shap.summary_plot(shap_values, train_pipe, show=False)
                 plt.savefig('Summary_Plot.png',format = "png",dpi = 150,bbox_inches = 'tight')
@@ -90,6 +126,12 @@ def download_explainability_charts(data_idx, evaluationData, projectName, modell
                 shap.summary_plot(shap_values, train_pipe, plot_type='bar', show=False)
                 plt.savefig('Summary_Bar_Plot.png',format = "png",dpi = 150,bbox_inches = 'tight')
                 plt.close()
+                sourcePath = './'
+                sourceFiles = os.listdir(sourcePath)
+                destinationPath = explainabilityPath
+                for file in sourceFiles:
+                    if file.endswith('.png'):
+                        shutil.move(os.path.join(sourcePath, file), os.path.join(destinationPath, file))
             except Exception as e:
                 print(e)
                 print('Unable to generate SHAP explainability files')
@@ -99,114 +141,52 @@ def download_explainability_charts(data_idx, evaluationData, projectName, modell
     for file in sourceFiles:
         if file.endswith('.png') or file.endswith('.html'):
             shutil.move(os.path.join(sourcePath, file), os.path.join(destinationPath, file))
-    return
+    return instancePath
 
-def model_explainability(data_idx, evaluationData, target_att, projectName, modellingModelPath):
-    evaluationData
-    evaluationData.drop([target_att], axis=1, inplace=True)
+def model_explainability(instancePath, explainabilityPath):
 
-    saved_model = load_model(modellingModelPath+projectName+'_finalised_model')
-    train_pipe = saved_model[:-1].transform(evaluationData)
+    st.markdown('The folowing shows how each of the features contributes to push the model output from the base value, the average model output over the entire training dataset used to develop the model, to the predicted output of the selected instance of the unseen data.')
+    st.markdown('Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue.')
 
-    numRows = train_pipe[train_pipe.columns[0]].count()
-    numRows.item()
-
-    if numRows <= 50:
-        maximumRows = numRows
+    filenames = os.listdir(instancePath+'Force/')
+    filenames.sort()
+    if filenames:
+        selected_filename = st.selectbox('Select a visualisation:', filenames, index=0)
+        HtmlFile = open(instancePath+'Force/'+selected_filename, 'r', encoding='utf-8')
+        source_code = HtmlFile.read()
+        #print(source_code)
+        components.html(source_code, height=200)
     else:
-        maximumRows = 50
-    maximumRows = getattr(maximumRows, "tolist", lambda: maximumRows)()
+        filenames = os.listdir(instancePath + 'Waterfall/')
+        filenames.sort()
+        selected_filename = st.selectbox('Select a visualisation:', filenames, index=0)
+        img = amb.load_image(instancePath + selected_filename)
+        st.image(img, use_column_width=True)
+        plt.close()
 
-    try:
-        explainer = shap.TreeExplainer(saved_model.named_steps["trained_model"])
-        shap_values = explainer.shap_values(X=train_pipe.iloc[0:maximumRows, :])
+    my_file = Path(explainabilityPath+'explainer.html')
+    if my_file.is_file():
+        st.markdown('The following shows the same output as above but for every instance within a single chart')
+        HtmlFile = open(my_file, 'r', encoding='utf-8')
+        source_code = HtmlFile.read()
+        # print(source_code)
+        components.html(source_code, height=400)
 
-        st.markdown('The folowing shows how each of the features contributes to push the model output from the base value, the average model output over the entire training dataset used to develop the model, to the predicted output of the selected instance of the unseen data.')
-        st.markdown('Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue.')
+    st.markdown('The following visualisations show the importance of each attribute of the dataset on the predictions made by the model ')
+    st.markdown('The plot below sorts the attributes by the magnitude of the effect it has on the model and the distribution of the impacts each attribute has on the model output. The color represents the feature value (red high, blue low). ')
+    my_file = Path(explainabilityPath + 'Summary_Plot.png')
+    if my_file.is_file():
+        img = amb.load_image(my_file)
+        st.image(img, use_column_width=True)
+        plt.close()
 
-        with st.form('instance_select'):
-            data_idx = st.slider('Select instance to view from the Unseen Data predictions', 0, maximumRows)
-            submitted = st.form_submit_button("Submit")
-        st.write('Displaying instance - ' + str(data_idx))
-        try:
-            amb.st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1][data_idx, :], train_pipe.iloc[data_idx, :]))
-
-            #shap.force_plot(explainer.expected_value[1], shap_values[1][data_idx, :], train_pipe.iloc[data_idx, :], show=False, matplotlib=True).savefig('Force_Plot.png',format = "png",dpi = 150,bbox_inches = 'tight')
-            #plt.clf()
-
-        except:
-            try:
-                amb.st_shap(shap.force_plot(explainer.expected_value, shap_values[data_idx, :], train_pipe.iloc[data_idx, :]))
-            except:
-                st.write('Failed to create SHAP Force Plot')
-        st.markdown('The following shows the same output as above but for every instance')
-        try:
-            amb.st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], train_pipe), height=400)
-        except:
-            try:
-                amb.st_shap(shap.force_plot(explainer.expected_value, shap_values, train_pipe), height=400)
-            except:
-                st.write('Failed to create SHAP Overall Force Plot')
-
-        #shap_values = explainer.shap_values(X=train_pipe)
-        st.set_option('deprecation.showPyplotGlobalUse', False)
-        st.markdown('The following visualisations show the importance of each attribute of the dataset on the predictions made by the model ')
-        st.markdown('The plot below sorts the attributes by the magnitude of the effect it has on the model and the distribution of the impacts each attribute has on the model output. The color represents the feature value (red high, blue low). ')
-        st.pyplot(shap.summary_plot(shap_values, train_pipe))
-
-    except:
-        print('Unable to create TreeExplainer SHAP explainability report')
-        try:
-            st.set_option('deprecation.showPyplotGlobalUse', False)
-            explainer = shap.Explainer(saved_model.named_steps["trained_model"], train_pipe)
-            shap_values = explainer(train_pipe)
-
-            st.markdown(
-                'The folowing shows how each of the features contributes to push the model output from the base value, the average model output over the entire training dataset used to develop the model, to the predicted output of the selected instance of the unseen data.')
-            st.markdown(
-                'Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue.')
-            with st.form('instance_select'):
-                data_idx = st.slider('Select instance to view from the Unseen Data predictions', 0, maximumRows)
-                submitted = st.form_submit_button("Submit")
-            st.write('Displaying instance - ' + str(data_idx))
-            st.pyplot(shap.plots.waterfall(shap_values[data_idx]))
-            st.markdown(
-                'The following visualisations show the importance of each attribute of the dataset on the predictions made by the model ')
-            st.markdown(
-                'The plots below sorts the attributes by the magnitude of the effects they have on the model and the distribution of the impacts each attribute has on the model output. The color represents the feature value (red high, blue low). ')
-            st.pyplot(shap.plots.beeswarm(shap_values, max_display=20))
-
-            st.pyplot(shap.plots.heatmap(shap_values))
-
-        except:
-            print('Unable to create Explainer report')
-            try:
-                ex = shap.KernelExplainer(saved_model.named_steps["trained_model"].predict, train_pipe)
-                shap_values = ex.shap_values(train_pipe.iloc[0, :])
-
-                st.markdown(
-                    'The folowing shows how each of the features contributes to push the model output from the base value, the average model output over the entire training dataset used to develop the model, to the predicted output of the selected instance of the unseen data.')
-                st.markdown(
-                    'Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue.')
-
-                with st.form('instance_select'):
-                    data_idx = st.slider('Select instance to view from the Unseen Data predictions', 0, maximumRows)
-                    submitted = st.form_submit_button("Submit")
-                st.write('Displaying instance - ' + str(data_idx))
-
-                st.markdown('The following shows the same output as above but for every instance')
-                amb.st_shap(shap.force_plot(ex.expected_value, shap_values, train_pipe.iloc[data_idx, :]))
-                st.markdown(
-                    'The following visualisations show the importance of each attribute of the dataset on the predictions made by the model ')
-                st.markdown(
-                    'The plot below sorts the attributes by the magnitude of the effect it has on the model and the distribution of the impacts each attribute has on the model output. The color represents the feature value (red high, blue low). ')
-                shap_values = ex.shap_values(X=train_pipe)
-                st.set_option('deprecation.showPyplotGlobalUse', False)
-                st.pyplot(shap.summary_plot(shap_values, train_pipe))
-                st.pyplot(shap.summary_plot(shap_values, train_pipe, plot_type='bar'))
-            except:
-                st.markdown('Unable to generate SHAP explainability report')
-    return data_idx
+    my_file = Path(explainabilityPath + 'Heatmap.png')
+    if my_file.is_file():
+        st.markdown('The following heatmap shows the effect of each attribute for each intance')
+        img = amb.load_image(my_file)
+        st.image(img, use_column_width=True)
+        plt.close()
+    return
 
 def app():
     modelType = st.session_state['modelType']
@@ -227,18 +207,7 @@ def app():
     st.markdown('### Model Predictions from unseen data')
     st.dataframe(unseen_predictions)
 
-    if 'data_idx' not in st.session_state:
-        st.session_state.data_idx = 0
+    instancePath = generate_explainability_charts(evaluationData, projectName, modellingModelPath, explainabilityPath)
 
-    data_idx = model_explainability(st.session_state.data_idx, evaluationData, target_att, projectName, modellingModelPath)
+    model_explainability(instancePath, explainabilityPath)
 
-    st.session_state.data_idx = data_idx
-
-    st.markdown('##### Generate explainability visualisations and download to project folder (Force Plot will be for the current instance)')
-    st.markdown('This may take a while to complete...')
-    if st.button('Download'):
-        #my_bar = st.progress(0)
-        #for percent_complete in range(100):
-        download_explainability_charts(data_idx, evaluationData, projectName, modellingModelPath, explainabilityPath)
-        #    my_bar.progress(percent_complete + 1)
-        st.markdown('Completed Download')

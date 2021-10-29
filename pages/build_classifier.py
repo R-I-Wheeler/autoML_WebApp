@@ -1,12 +1,21 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import automlbuilder as amb
+
+import numpy as np
 import matplotlib.pyplot as plt
 import os
 import shutil
+from sklearn.model_selection import StratifiedKFold
 from pycaret.classification import *
 from pycaret.utils import check_metric
 
+from yellowbrick.classifier import ClassificationReport
+from yellowbrick.classifier import ConfusionMatrix
+from yellowbrick.classifier import ROCAUC
+from yellowbrick.classifier import PrecisionRecallCurve
+from yellowbrick.model_selection import LearningCurve
+from yellowbrick.model_selection import FeatureImportances
 
 def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, combineLevels):
 
@@ -32,38 +41,69 @@ def build_model(ensembleSelect, metricSelect, numEstimators, numIterations, mode
     tuningData = pull(True)
     return tuned_model, tuningData
 
-def model_analysis_charts(model, modelType):
-    modelAnalysis = st.selectbox('Select model analysis plot:', ('Confusion Matrix', 'Classification Report',
-                                                                 'Class Prediction Error', 'Learning Curve',
-                                                                 'Area Under the Curve', 'Parameters'))
-    if modelAnalysis == 'Confusion Matrix':
-        plot_model(model, plot='confusion_matrix', display_format='streamlit')
-    elif modelAnalysis == 'Classification Report':
-        plot_model(model, plot='class_report', display_format='streamlit')
-    elif modelAnalysis == 'Class Prediction Error':
-        plot_model(model, plot='error', display_format='streamlit')
-    elif modelAnalysis == 'Learning Curve':
-        plot_model(model, plot='learning', display_format='streamlit')
-    elif modelAnalysis == 'Area Under the Curve':
-        plot_model(model, plot='auc', display_format='streamlit')
-    elif modelAnalysis == 'parameter':
-        plot_model(model, plot='parameter', display_format='streamlit')
-    return
-
-def download_model_analysis_charts(model, modelType, modellingAnalysisPath):
-    plot_model(model, save=True, plot='confusion_matrix')
-    plot_model(model, save=True, plot='class_report')
-    plot_model(model, save = True, plot='error')
-    plot_model(model, save = True, plot='learning')
-    plot_model(model, save = True, plot='auc')
-    plot_model(model, save = True, plot='parameter')
+def generate_classification_model_analysis(model, X_train, y_train, X_test, y_test, modellingAnalysisPath):
+    #Generate Confusion Matrix
+    try:
+        cm = ConfusionMatrix(model)
+        cm.fit(X_train, y_train)
+        cm.score(X_test, y_test)
+        cm.show(outpath="confusion_matrix.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Area Under Curve
+    try:
+        visualizer = ROCAUC(model)
+        visualizer.fit(X_train, y_train)
+        visualizer.score(X_test, y_test)
+        visualizer.show(outpath="area_under_curve.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate classification report
+    try:
+        visualizer = ClassificationReport(model, support=True)
+        visualizer.fit(X_train, y_train)
+        visualizer.score(X_test, y_test)
+        visualizer.show(outpath="classification_report.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Precision Recall Curve
+    try:
+        viz = PrecisionRecallCurve(model)
+        viz.fit(X_train, y_train)
+        viz.score(X_test, y_test)
+        viz.show(outpath="precison_recall_curve.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Learning Curve
+    try:
+        cv = StratifiedKFold(n_splits=12)
+        sizes = np.linspace(0.3, 1.0, 10)
+        # Instantiate the classification model and visualizer
+        visualizer = LearningCurve(model, cv=cv, scoring='accuracy', train_sizes=sizes, n_jobs=4)
+        visualizer.fit(X_train, y_train)  # Fit the data to the visualizer
+        visualizer.show(outpath="learning_curve.png")  # Finalize and render the figure
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Feature Importances
+    try:
+        viz = FeatureImportances(model)
+        viz.fit(X_train, y_train)
+        viz.show(outpath="feature_importance.png")
+        plt.close()
+    except Exception as e:
+        print(e)
     sourcepath = './'
     sourcefiles = os.listdir(sourcepath)
     destinationpath = modellingAnalysisPath
     for file in sourcefiles:
         if file.endswith('.png'):
             shutil.move(os.path.join(sourcepath, file), os.path.join(destinationpath, file))
-    return
+
 
 def model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath, modellingModelPath, modellingAnalysisPath):
 
@@ -201,21 +241,26 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
     st.markdown ('### Model Analysis')
     st.markdown ('Selection of plots to be used to evaluate the model')
-    model_analysis_charts(tunedModel, modelType)
+    X_train = train
+    y_train = get_config('y_train')
+    X_test = get_config('X_test')
+    y_test = get_config('y_test')
+    generate_classification_model_analysis(tunedModel, X_train, y_train, X_test, y_test, modellingAnalysisPath)
+
+    filenames = os.listdir(modellingAnalysisPath)
+    if filenames:
+        filenames.sort()
+        selected_filename = st.selectbox('Select a visualisation:', filenames)
+        img = amb.load_image(modellingAnalysisPath + selected_filename)
+        st.image(img, use_column_width=True)
+        plt.close()
+    else:
+        st.markdown('No analysis plots are available for this model')
 
     finalModel = finalize_model(tunedModel)
     unseen_predictions = predict_model(finalModel, data=evaluationData)
 
     accuracy = check_metric(unseen_predictions[target_att], unseen_predictions['Label'], metric='Accuracy')
-
-
-    st.markdown ('### Unseen Data Predictions - Confusion Matrix')
-
-    st.set_option('deprecation.showPyplotGlobalUse', False)
-    try:
-        st.pyplot(amb.prediction_confusion_matrix(unseen_predictions, target_att))
-    except:
-        st.write('This function is only available for binary classification')
 
     st.markdown('#### Model accuracy on unseen data = '+str(accuracy * 100)+'%')
 
@@ -226,18 +271,17 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.markdown('The predicted value is in the column headed "label", the column headed "score" contains the probability of a positive outcome')
     st.dataframe(unseen_predictions.astype('object'))
 
+    st.markdown('### Unseen Data Predictions - Confusion Matrix')
+    st.set_option('deprecation.showPyplotGlobalUse', False)
+    try:
+        st.pyplot(amb.prediction_confusion_matrix(unseen_predictions, target_att))
+    except:
+        st.write('This function is only available for binary classification')
+
     unseen_predictions.to_csv(modellingDataPath + 'UnseenPredictions.csv', index=False, )
     amb.csv_to_html(unseen_predictions, '#B000FD', modellingDataPath, 'UnseenPredictions.html')
     evaluationData.to_csv(modellingDataPath + 'Evaluation_Data.csv', index=False, )
     amb.csv_to_html(evaluationData, '#FD0000', modellingDataPath, 'Evaluation_Data.html')
-
-    st.markdown('##### Generate model analysis visualisations and download to project folder')
-    st.markdown('This may take a while to complete...')
-    if st.button('Download'):
-        download_model_analysis_charts(tunedModel, modelType, modellingAnalysisPath)
-        st.markdown('Completed Download')
-    return
-
 
 def app():
     modelType = st.session_state['modelType']

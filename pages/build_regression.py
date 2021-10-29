@@ -8,6 +8,10 @@ import shutil
 from pycaret.regression import *
 from pycaret.utils import check_metric
 
+from yellowbrick.regressor import ResidualsPlot
+from yellowbrick.regressor import PredictionError
+from yellowbrick.model_selection import LearningCurve
+from yellowbrick.model_selection import FeatureImportances
 
 def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod,  targetTransform, targetMethod, combineLevels):
 
@@ -32,34 +36,47 @@ def build_model(ensembleSelect, metricSelect, numEstimators, numIterations, mode
     tuningData = pull(True)
     return tuned_model, tuningData
 
-def model_analysis_charts(model):
-    modelAnalysis = st.selectbox('Select model analysis plot:', ('Residuals Plot', 'Prediction Error Plot',
-                                                                 'Validation Curve', 'Learning Curve','Parameters'))
-    if modelAnalysis == 'Residuals Plot':
-        plot_model(model, plot='residuals', display_format='streamlit')
-    elif modelAnalysis == 'Prediction Error Plot':
-        plot_model(model, plot='error', display_format='streamlit')
-    elif modelAnalysis == 'Validation Curve':
-        plot_model(model, plot='vc', display_format='streamlit')
-    elif modelAnalysis == 'Learning Curve':
-        plot_model(model, plot='learning', display_format='streamlit')
-    elif modelAnalysis == 'parameter':
-        plot_model(model, plot='parameter', display_format='streamlit')
-    return
-
-def download_model_analysis_charts(model, modelType, modellingAnalysisPath):
-    plot_model(model, save=True, plot='residuals')
-    plot_model(model, save=True, plot='error')
-    plot_model(model, save = True, plot='vc')
-    plot_model(model, save = True, plot='learning')
-    plot_model(model, save = True, plot='parameter')
+def generate_regression_model_analysis(model, X_train, y_train, X_test, y_test, modellingAnalysisPath):
+    #Generate Residuals plot
+    try:
+        visualizer = ResidualsPlot(model, hist=False, qqplot=True)
+        visualizer.fit(X_train, y_train)
+        visualizer.score(X_test, y_test)
+        visualizer.show(outpath="residuals_plot.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Prediction Error
+    try:
+        visualizer = PredictionError(model)
+        visualizer.fit(X_train, y_train)
+        visualizer.score(X_test, y_test)
+        visualizer.show(outpath="prediction_error.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Learning Curve
+    try:
+        visualizer = LearningCurve(model, scoring='r2')
+        visualizer.fit(X_train, y_train)  # Fit the data to the visualizer
+        visualizer.show(outpath="learning_curve")  # Finalize and render the figure
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Feature Importances
+    try:
+        viz = FeatureImportances(model)
+        viz.fit(X_train, y_train)
+        viz.show(outpath="feature_importance")
+        plt.close()
+    except Exception as e:
+        print(e)
     sourcepath = './'
     sourcefiles = os.listdir(sourcepath)
     destinationpath = modellingAnalysisPath
     for file in sourcefiles:
         if file.endswith('.png'):
             shutil.move(os.path.join(sourcepath, file), os.path.join(destinationpath, file))
-    return
 
 def model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath,
                       modellingModelPath, modellingAnalysisPath):
@@ -209,7 +226,21 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
     st.markdown ('### Model Analysis')
     st.markdown('Selection of plots to be used to evaluate the model')
-    model_analysis_charts(tunedModel)
+    X_train = train
+    y_train = get_config('y_train')
+    X_test = get_config('X_test')
+    y_test = get_config('y_test')
+    generate_regression_model_analysis(tunedModel, X_train, y_train, X_test, y_test, modellingAnalysisPath)
+
+    filenames = os.listdir(modellingAnalysisPath)
+    filenames.sort()
+    if filenames:
+        selected_filename = st.selectbox('Select a visualisation:', filenames)
+        img = amb.load_image(modellingAnalysisPath + selected_filename)
+        st.image(img, use_column_width=True)
+        plt.close()
+    else:
+        st.markdown('No analysis plots are available for this model')
 
     finalModel = finalize_model(tunedModel)
     unseen_predictions = predict_model(finalModel, data=evaluationData)
@@ -230,11 +261,6 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     evaluationData.to_csv(modellingDataPath + 'Evaluation_Data.csv', index=False, )
     amb.csv_to_html(evaluationData, '#FD0000', modellingDataPath, 'Evaluation_Data.html')
 
-    st.markdown('##### Generate model analysis visualisations and download to project folder')
-    st.markdown('This may take a while to complete...')
-    if st.button('Download'):
-        download_model_analysis_charts(tunedModel, modelType, modellingAnalysisPath)
-        st.markdown('Completed Download')
     return
 
 
