@@ -6,7 +6,7 @@ import shutil
 
 # Custom imports
 from multipage import MultiPage
-from pages import data_analysis, build_classifier, build_regression, explainability # import your pages here
+from pages import data_analysis, build_classifier, build_regression, explainability, logging # import your pages here
 
 # Create an instance of the app
 app = MultiPage()
@@ -35,7 +35,6 @@ def initiate_application_cache(modelType, target_att, projectName, dataPath, mod
     if 'explainabilityPath' not in st.session_state:
         st.session_state['explainabilityPath'] = explainabilityPath
 
-
     if 'transformTarget' not in st.session_state:
         st.session_state['transformTarget'] = False
     if 'dataEdited' not in st.session_state:
@@ -58,6 +57,11 @@ def initiate_application_cache(modelType, target_att, projectName, dataPath, mod
 
 
 def main():
+    if 'log_list' not in st.session_state:
+        log_list = []
+        st.session_state['log_list'] = log_list
+
+    log_list = st.session_state['log_list']
     # Title of the main page
     st.title("AutoML Model Builder")
     st.markdown('The "AutoML Model Builder" uses an open source machine learning library (PyCaret) to develop machine learning models within this no-code web application.')
@@ -83,16 +87,27 @@ def main():
         else:
             if modelType == 'Classification':
                 workingData[target_att] = workingData[target_att].astype('int32')
+
+        message = 'Project Name = '+projectName+' - Model Type = '+modelType+' - Target Attribute = '+target_att+' '
+        log_list = amb.update_logging(log_list, 'Project Setup', message)
+
         analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath, modellingAnalysisPath, explainabilityPath = amb.generate_working_directories(projectName)
+        log_list = amb.update_logging(log_list, 'Project Setup', 'Project Folder Created')
 
         uploadData.to_csv(dataPath + 'Original_Data.csv', index=False)
         amb.csv_to_html(uploadData,'#FF7B7B',dataPath, 'Original_Data.html')
+        original_shape = uploadData.shape
+        log_list = amb.update_logging(log_list, 'Project Setup', 'Shape of Original Data - '+str(original_shape))
+
         workingData.to_csv(dataPath + 'Clean_Data.csv', index=False)
         amb.csv_to_html(workingData, '#519000', dataPath, 'Clean_Data.html')
+        clean_shape = workingData.shape
+        log_list = amb.update_logging(log_list, 'Project Setup', 'Shape of Cleaned Data - ' + str(clean_shape))
 
         initiate_application_cache(modelType, target_att, projectName, dataPath, modellingModelPath,
                                    modellingReportsPath, modellingDataPath, analysisReportsPath, analysisPlotsPath, modellingAnalysisPath, explainabilityPath)
-        #st.sidebar.markdown('##### Download Project Folder')
+        #print(log_list)
+        st.session_state['log_list'] = log_list
 
         # Add all your applications (pages) here
         app.add_page("Data Analysis", data_analysis.app)
@@ -101,6 +116,7 @@ def main():
         else:
             app.add_page("Regression Model Builder", build_regression.app)
         app.add_page("Model Explainability", explainability.app)
+        app.add_page("Project Log", logging.app)
         # The main app
         app.run()
     else:

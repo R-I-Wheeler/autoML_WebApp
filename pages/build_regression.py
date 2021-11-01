@@ -79,7 +79,7 @@ def generate_regression_model_analysis(model, X_train, y_train, X_test, y_test, 
             shutil.move(os.path.join(sourcepath, file), os.path.join(destinationpath, file))
 
 def model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath,
-                      modellingModelPath, modellingAnalysisPath):
+                      modellingModelPath, modellingAnalysisPath, log_list):
 
     st.title('AutoML '+modelType+' - Modelling')
     st.markdown('The data from "Data Analysis" will now be used to develop a machine learning model. The data will first be split, 90% will be used for training and testing the model (split again 70/30) and 10% will be kept back as unseen data.')
@@ -122,21 +122,29 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
         if normaliseMethod != 'none':
             activateNormalise = True
+            log_list = amb.update_logging(log_list, 'Regression Environment Configuration',
+                                          'Data Normalisation selected - ' + normaliseMethod)
         else:
             activateNormalise = False
             normaliseMethod = 'zscore'
         if transformMethod != 'none':
             activateTransform = True
+            log_list = amb.update_logging(log_list, 'Regression Environment Configuration',
+                                          'Data Transformation selected - ' + transformMethod)
         else:
             activateTransform = False
             transformMethod = 'yeo-johnson'
         if targetMethod != 'none':
             targetTransform = True
+            log_list = amb.update_logging(log_list, 'Regression Environment Configuration',
+                                          'Target Transformation selected - ' + targetMethod)
         else:
             targetTransform = False
             targetMethod = 'box-cox'
         if combineSelect != 'Yes':
             combineLevels = False
+            log_list = amb.update_logging(log_list, 'Regression Environment Configuration',
+                                          'Combine Rare Levels deactivated')
 
     st.session_state.activateNormalise = activateNormalise
     st.session_state.normaliseMethod = normaliseMethod
@@ -146,12 +154,21 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.session_state.targetMethod = targetMethod
     st.session_state.combineLevels = combineLevels
 
+    log_list = amb.update_logging(log_list, 'Build Regression',
+                                  'Split dataset, 90 % for modelling, 10 % unseen prediction')
     trainingData, evaluationData = amb.setup_modelling_data(workingData)
+
+    log_list = amb.update_logging(log_list, 'Build Regression',
+                                  'AutoML Environment Setup')
     best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod,  targetTransform, targetMethod, combineLevels)
 
     st.markdown('### AutoML Environment')
     st.markdown('Table showing the configuration of the modelling environment')
     st.dataframe(environmentData)
+    f = open(modellingDataPath + "Environment_Data.html", "w")
+    style_text = '<style>table {border-collapse: collapse;border-radius: 5px;box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);overflow: hidden;font-family: "Ariel", sans-serif;font-weight: bold;font-size: 14px;}th {background: #4B4B4B;color: #ffffff;text-align: left;}th,td {padding: 10px 20px;}tr:nth-child(even) {background: #eeeeee;}</style>\n'
+    f.write(style_text + environmentData.render())
+    f.close()
 
     st.markdown ('### Training Data')
     st.markdown('The training data created during the environment setup to be used for developing the model.')
@@ -161,6 +178,8 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.markdown ('### Training & Test Data Comparison')
     st.markdown(
         'A Sweetviz report comparing the data that will be used for training and testing during model development')
+    log_list = amb.update_logging(log_list, 'Build Regression',
+                                  'Generating modelling and test data Sweetviz data report')
     training_report = amb.generate_sv(train, '', 'TrainingData',test, True,modellingReportsPath)
     try:
         components.html(training_report, width=1000, height=1000, scrolling=True)
@@ -179,6 +198,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.markdown(
         'All models within the model library were trained with scores generated using k-fold cross validation for metric evaluation')
     st.dataframe(modelComparison)
+    amb.csv_to_html(modelComparison, '#4B4B4B', modellingDataPath, 'Model_Comparison.html')
 
     with st.form('model_config'):
         numIterations = 10
@@ -208,13 +228,22 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     if ensembleSelect != 'None':
         st.markdown ('##### Ensemble type = '+ensembleSelect)
         st.markdown ('##### Number of estimators = '+str(numEstimators))
+        log_list = amb.update_logging(log_list, 'Build Regression',
+                                      'Tuning Model - Ensemble Type = ' + ensembleSelect + ' - Number of Estimators = ' + str(
+                                          numEstimators))
     else:
         st.markdown ('##### Maximum number of tuning iterations = '+str(numIterations))
+        log_list = amb.update_logging(log_list, 'Build Regression',
+                                      'Tuning Model - Maximum Number of tuning iterations = ' + str(numIterations))
 
+    log_list = amb.update_logging(log_list, 'Build Regression',
+                                  'Tuning Model - ' + modelChange)
     tunedModel, tuningData = build_model(ensembleSelect, metricSelect, numEstimators, numIterations, modelChange)
 
     st.markdown ('### Best Model (Tuned)')
     st.write(tunedModel)
+    log_list = amb.update_logging(log_list, 'Build Regression',
+                                  'Best Model - ' + str(tunedModel))
     file = open(modellingModelPath+"model_description.txt", "w")
     model_desc = repr(tunedModel)
     file.write(model_desc + "\n")
@@ -223,6 +252,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.markdown ('### Model Tuning Results')
     st.markdown('Shows the performance scores from training and testing the model whilst tuning for each fold')
     st.write(tuningData)
+    amb.csv_to_html(tuningData, '#4B4B4B', modellingDataPath, 'Tuning_Results.html')
 
     st.markdown ('### Model Analysis')
     st.markdown('Selection of plots to be used to evaluate the model')
@@ -248,6 +278,8 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     accuracy = check_metric(unseen_predictions[target_att], unseen_predictions['Label'], metric='MAE')
 
     st.markdown('#### Mean Average Error of predicted values using the unseen data = ' + str(accuracy))
+    log_list = amb.update_logging(log_list, 'Build Regression',
+                                  'Mean Average Error of predicted values using the unseen data = ' + str(accuracy))
 
     save_model(finalModel, modellingModelPath+projectName+'_finalised_model')
 
@@ -261,7 +293,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     evaluationData.to_csv(modellingDataPath + 'Evaluation_Data.csv', index=False, )
     amb.csv_to_html(evaluationData, '#FD0000', modellingDataPath, 'Evaluation_Data.html')
 
-    return
+    return log_list
 
 
 target_att = None
@@ -274,11 +306,13 @@ def app():
     modellingReportsPath = st.session_state['modellingReportsPath']
     modellingDataPath = st.session_state['modellingDataPath']
     modellingAnalysisPath = st.session_state['modellingAnalysisPath']
+    log_list = st.session_state['log_list']
 
     workingData = pd.read_csv(modellingDataPath + 'Modelling_Data.csv')
 
-    model_development(workingData, target_att, modelType, modellingReportsPath, projectName,
-                                       modellingDataPath, modellingModelPath, modellingAnalysisPath)
+    log_list = model_development(workingData, target_att, modelType, modellingReportsPath, projectName,
+                                       modellingDataPath, modellingModelPath, modellingAnalysisPath, log_list)
 
     plt.clf()
+    st.session_state['log_list'] = log_list
 

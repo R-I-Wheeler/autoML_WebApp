@@ -19,6 +19,7 @@ import shap
 from scipy import stats
 import base64
 #import lux
+from datetime import datetime
 
 # Function to Read and Manipulate Images
 def load_image(img):
@@ -290,3 +291,9 @@ def csv_to_html(df, th_colour, path, filename):
     f = open(path+filename, "w")
     f.write(final)
     f.close()
+
+def update_logging (log_list, task, message):
+    now = datetime.now()
+    timestamp = now.strftime('%d-%m-%Y %H:%M:%S')
+    log_list.append([task, message, timestamp])
+    return log_list
