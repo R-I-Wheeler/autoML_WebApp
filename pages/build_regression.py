@@ -235,6 +235,8 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.markdown ('##### Maximum number of tuning iterations = '+str(numIterations))
         log_list = amb.update_logging(log_list, 'Build Regression',
                                       'Tuning Model - Maximum Number of tuning iterations = ' + str(numIterations))
+        log_list = amb.update_logging(log_list, 'Build Regression',
+                                      'Tuning Model - Optimisation metric = ' + metricSelect)
 
     log_list = amb.update_logging(log_list, 'Build Regression',
                                   'Tuning Model - ' + modelChange)
