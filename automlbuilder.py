@@ -48,27 +48,18 @@ def generate_sv(workingData, target_att, reportname, compareData, compare, repor
                             layout='vertical',
                             scale=None)
         os.rename(reportsPath+'SWEETVIZ_REPORT.html', reportsPath+reportname+'_Report.html')
-        HtmlFile = open(reportsPath+reportname+'_Report.html', 'r', encoding='utf-8')
-        #HtmlFile = open(reportname + '_Report.html', 'r')
-        sv_report = HtmlFile.read()
-        reportSuccess = True
     except:
-        reportSuccess = False
-        sv_report = None
-    return sv_report, reportSuccess
+        print('Failed to Generate Sweetviz Report')
+    return
 
 
 def generate_pp(workingData, reportsPath):
     try:
         profile = ProfileReport(workingData, title="Data Profiling Report", explorative=True)
         profile.to_file(reportsPath+"pp_OriginalData_Report.html")
-        HtmlFile = open(reportsPath+'pp_OriginalData_Report.html', 'r', encoding='utf-8')
-        pp_report = HtmlFile.read()
-        reportSuccess=True
     except:
-        reportSuccess=False
-        pp_report=None
-    return pp_report, reportSuccess
+        print('Failed to Generate Pandas Profile Report')
+    return
 
 @st.cache(allow_output_mutation=True)
 def clean_data(allData):

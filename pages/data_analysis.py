@@ -10,38 +10,13 @@ from scipy.stats import norm
 
 import automlbuilder as amb
 
-def data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess, pp_report, ppReportSuccess, plotsPath, modellingDataPath, log_list):
+def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modellingDataPath, log_list, analysisReportsPath):
+    dataEdited = False
     log_list = amb.update_logging(log_list, 'Data Analysis', 'Starting Data Analysis')
     st.title('AutoML ' + modelType + ' - Data Analysis')
 
     st.markdown('## Clean Dataset')
     st.dataframe(workingData.astype('object'))
-
-    st.markdown('## Data Report')
-    st.markdown('Two reports are generated using open source libraries, "Pandas Profiling" and "Sweetviz". These reports identify the statistics related to each of the attributes within the datset and the interactions and correlations between atrributes')
-    dataReporting = st.selectbox('Select data report:', ('Pandas Profile','Sweetviz'), index=0)
-    if dataReporting == 'Sweetviz':
-        if svReportSuccess == True:
-            components.html(sv_report, width=1000,height=1000, scrolling=True)
-        else:
-            st.write('Failed to generate Sweetviz report')
-            log_list = amb.update_logging(log_list, 'Data Analysis', 'Failed to generate Sweetviz report')
-    else:
-        if ppReportSuccess == True:
-            components.html(pp_report, width=1000, height=1000, scrolling=True)
-        else:
-            st.write ('Failed to generate Pandas Profile report')
-            log_list = amb.update_logging(log_list, 'Data Analysis', 'Failed to generate Pandas Profile report')
-
-    st.markdown('## Quick Data Visualisation')
-    st.markdown('Quick visualisations generates plots for all attributes within the dataset including distribution plots, box plots, histograms, scatter plots for each attribute against the target and correlation plots')
-    filenames = os.listdir(plotsPath)
-    filenames.sort()
-    selected_filename = st.selectbox('Select a visualisation:', filenames)
-
-    img = amb.load_image(plotsPath+selected_filename)
-    st.image(img,use_column_width=True)
-    plt.close()
 
     with st.form('drop_columns'):
         st.markdown('## Data Configurator')
@@ -102,10 +77,63 @@ def data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess
             st.dataframe(editedData.astype('object'))
             editedData.to_csv(modellingDataPath + 'Modelling_Data.csv', index=False, )
             amb.csv_to_html(editedData, '#0096FD', modellingDataPath, 'Modelling_Data.html')
-            st.session_state.dataEdited = True
+            workingData = editedData
+            dataEdited = True
         else:
             workingData.to_csv(modellingDataPath+'Modelling_Data.csv', index=False,)
             amb.csv_to_html(workingData, '#0096FD', modellingDataPath, 'Modelling_Data.html')
+
+    if not os.path.isfile(analysisReportsPath+'OriginalData_Report.html') or dataEdited:
+        log_list = amb.update_logging(log_list, 'Data Analysis',
+                                      'Generating Sweetviz data reports')
+        amb.generate_sv(workingData, target_att, 'OriginalData', None, False,
+                                                     analysisReportsPath)
+    if not os.path.isfile(analysisReportsPath + 'pp_OriginalData_Report.html') or dataEdited:
+        log_list = amb.update_logging(log_list, 'Data Analysis',
+                                      'Generating Pandas Profiling data reports')
+        amb.generate_pp(workingData, analysisReportsPath)
+
+    st.markdown('## Data Report')
+    st.markdown('Two reports are generated using open source libraries, "Pandas Profiling" and "Sweetviz". These reports identify the statistics related to each of the attributes within the datset and the interactions and correlations between atrributes')
+    dataReporting = st.selectbox('Select data report:', ('Pandas Profile','Sweetviz'), index=0)
+    if dataReporting == 'Sweetviz':
+        if os.path.isfile(analysisReportsPath+'OriginalData_Report.html'):
+            HtmlFile = open(analysisReportsPath+'OriginalData_Report.html', 'r', encoding='utf-8')
+            source_code = HtmlFile.read()
+            # print(source_code)
+            components.html(source_code, height=750, scrolling=True)
+        else:
+            st.write('Failed to generate Sweetviz report')
+            log_list = amb.update_logging(log_list, 'Data Analysis', 'Failed to generate Sweetviz report')
+    else:
+        if os.path.isfile(analysisReportsPath + 'pp_OriginalData_Report.html'):
+            HtmlFile = open(analysisReportsPath + 'pp_OriginalData_Report.html', 'r', encoding='utf-8')
+            source_code = HtmlFile.read()
+            # print(source_code)
+            components.html(source_code, height=750, scrolling=True)
+        else:
+            st.write ('Failed to generate Pandas Profile report')
+            log_list = amb.update_logging(log_list, 'Data Analysis', 'Failed to generate Pandas Profile report')
+
+    if not os.path.isfile(analysisPlotsPath + 'Box_Plot.png') or dataEdited:
+        log_list = amb.update_logging(log_list, 'Data Analysis', 'Generating data visualisation plots')
+        amb.half_masked_corr_heatmap(workingData, analysisPlotsPath + 'Correlation.png')
+        amb.gen_scatterplots(workingData, target_att, analysisPlotsPath + 'Scatter.png')
+        amb.gen_histograms(workingData, analysisPlotsPath + 'Histograms.png')
+        amb.gen_boxplots(workingData, analysisPlotsPath + 'Box_Plot.png')
+        amb.generate_distPlot(workingData, target_att, analysisPlotsPath)
+
+    st.markdown('## Quick Data Visualisation')
+    st.markdown('Quick visualisations generates plots for all attributes within the dataset including distribution plots, box plots, histograms, scatter plots for each attribute against the target and correlation plots')
+    filenames = os.listdir(analysisPlotsPath)
+    filenames.sort()
+    selected_filename = st.selectbox('Select a visualisation:', filenames)
+
+    img = amb.load_image(analysisPlotsPath+selected_filename)
+    st.image(img,use_column_width=True)
+    plt.close()
+
+    st.markdown('##### Select "' + modelType + ' Model Builder" in App Navigation to continue to Modelling.')
     return log_list
 
 def app():
@@ -117,27 +145,13 @@ def app():
     analysisPlotsPath = st.session_state['analysisPlotsPath']
     log_list = st.session_state['log_list']
 
-    if st.session_state.dataEdited == False:
-        workingData = pd.read_csv(dataPath + 'Clean_Data.csv')
-    else:
+    if os.path.isfile(modellingDataPath + 'Modelling_Data.csv'):
         workingData = pd.read_csv(modellingDataPath + 'Modelling_Data.csv')
+    else:
+        workingData = pd.read_csv(dataPath + 'Clean_Data.csv')
 
-    log_list = amb.update_logging(log_list, 'Data Analysis', 'Generating data visualisation plots')
-    amb.half_masked_corr_heatmap(workingData, analysisPlotsPath + 'Correlation.png')
-    amb.gen_scatterplots(workingData, target_att, analysisPlotsPath + 'Scatter.png')
-    amb.gen_histograms(workingData, analysisPlotsPath + 'Histograms.png')
-    amb.gen_boxplots(workingData, analysisPlotsPath + 'Box_Plot.png')
-    amb.generate_distPlot(workingData, target_att, analysisPlotsPath)
+    log_list = data_analysis(workingData, target_att, modelType, analysisPlotsPath, modellingDataPath, log_list, analysisReportsPath)
 
-    log_list = amb.update_logging(log_list, 'Data Analysis', 'Generating Pandas Profiling and Sweetviz data reports')
-    sv_report, svReportSuccess = amb.generate_sv(workingData, target_att, 'OriginalData', None, False,
-                                                 analysisReportsPath)
-    pp_report, ppReportSuccess = amb.generate_pp(workingData, analysisReportsPath)
-
-    log_list = data_analysis(workingData, target_att, modelType, sv_report, svReportSuccess,
-                                                 pp_report, ppReportSuccess, analysisPlotsPath, modellingDataPath, log_list)
-
-    st.markdown('##### Select "'+modelType+' Model Builder" in App Navigation to continue to Modelling.')
     st.session_state['log_list'] = log_list
 
 

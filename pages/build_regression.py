@@ -180,18 +180,15 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         'A Sweetviz report comparing the data that will be used for training and testing during model development')
     log_list = amb.update_logging(log_list, 'Build Regression',
                                   'Generating modelling and test data Sweetviz data report')
-    training_report = amb.generate_sv(train, '', 'TrainingData',test, True,modellingReportsPath)
+    amb.generate_sv(train, '', 'TrainingData',test, True,modellingReportsPath)
     try:
-        components.html(training_report, width=1000, height=1000, scrolling=True)
-    except:
-        print('Unable to display comparison report at this time')
-        try:
-            HtmlFile = open(modellingReportsPath+"TrainingData_Report.html", 'r', encoding='utf-8')
+        if os.path.isfile(modellingReportsPath + 'TrainingData_Report.html'):
+            HtmlFile = open(modellingReportsPath + 'TrainingData_Report.html', 'r', encoding='utf-8')
             source_code = HtmlFile.read()
-            print(source_code)
-            components.html(source_code, height=1000, scrolling=True)
-        except:
-            st.write('Unable to display comparison report at this time')
+            # print(source_code)
+            components.html(source_code, height=750, scrolling=True)
+    except:
+        st.write('Unable to display comparison report at this time')
 
     st.markdown('### Model Comparison')
     st.markdown('A comparison table to evaluate all of the models that have been trained and tested')
