@@ -14,12 +14,21 @@ import shutil
 from pandas.api.types import is_numeric_dtype
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import shap
 from scipy import stats
 import base64
 #import lux
 from datetime import datetime
+
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+from yellowbrick.classifier import ClassificationReport
+from yellowbrick.classifier import ConfusionMatrix
+from yellowbrick.classifier import ROCAUC
+from yellowbrick.classifier import PrecisionRecallCurve
+from yellowbrick.model_selection import LearningCurve
+from yellowbrick.model_selection import FeatureImportances
 
 # Function to Read and Manipulate Images
 def load_image(img):
@@ -61,7 +70,6 @@ def generate_pp(workingData, reportsPath):
         print('Failed to Generate Pandas Profile Report')
     return
 
-@st.cache(allow_output_mutation=True)
 def clean_data(allData):
     drop_col = [e for e in allData.columns if allData[e].nunique() == allData.shape[0]]
     new_df_columns = [e for e in allData.columns if e not in drop_col]
@@ -95,7 +103,6 @@ def half_masked_corr_heatmap(workingdata, file=None):
 
     if file: plt.savefig(file, bbox_inches='tight')
     return
-
 
 def gen_scatterplots(workingdata, target_column, file=None):
     plotData = workingdata.copy()
@@ -253,14 +260,14 @@ def prediction_confusion_matrix(unseen_predictions, target_att):
     return plt
 
 def generate_working_directories(projectName):
-    analysisPlotsPath = './' + projectName + '/analysis/plots/'
-    analysisReportsPath = './' + projectName + '/analysis/reports/'
-    dataPath = './' + projectName + '/data/'
-    modellingDataPath = './' + projectName + '/modelling/data/'
-    modellingReportsPath = './' + projectName + '/modelling/reports/'
-    modellingModelPath = './' + projectName + '/modelling/model/'
-    modellingAnalysisPath = './' + projectName + '/modelling/analysis/'
-    explainabilityPath = './' + projectName + '/explainability/'
+    analysisPlotsPath = './Projects/' + projectName + '/analysis/plots/'
+    analysisReportsPath = './Projects/' + projectName + '/analysis/reports/'
+    dataPath = './Projects/' + projectName + '/data/'
+    modellingDataPath = './Projects/' + projectName + '/modelling/data/'
+    modellingReportsPath = './Projects/' + projectName + '/modelling/reports/'
+    modellingModelPath = './Projects/' + projectName + '/modelling/model/'
+    modellingAnalysisPath = './Projects/' + projectName + '/modelling/analysis/'
+    explainabilityPath = './Projects/' + projectName + '/explainability/'
     create_directory(dataPath)
     create_directory(analysisPlotsPath)
     create_directory(analysisReportsPath)
@@ -288,3 +295,66 @@ def update_logging (log_list, task, message):
     timestamp = now.strftime('%d-%m-%Y %H:%M:%S')
     log_list.append([task, message, timestamp])
     return log_list
+
+def generate_classification_model_analysis(model, X_train, y_train, X_test, y_test, modellingAnalysisPath):
+    #Generate Confusion Matrix
+    try:
+        cm = ConfusionMatrix(model)
+        cm.fit(X_train, y_train)
+        cm.score(X_test, y_test)
+        cm.show(outpath="confusion_matrix.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Area Under Curve
+    try:
+        visualizer = ROCAUC(model)
+        visualizer.fit(X_train, y_train)
+        visualizer.score(X_test, y_test)
+        visualizer.show(outpath="area_under_curve.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate classification report
+    try:
+        visualizer = ClassificationReport(model, support=True)
+        visualizer.fit(X_train, y_train)
+        visualizer.score(X_test, y_test)
+        visualizer.show(outpath="classification_report.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Precision Recall Curve
+    try:
+        viz = PrecisionRecallCurve(model)
+        viz.fit(X_train, y_train)
+        viz.score(X_test, y_test)
+        viz.show(outpath="precison_recall_curve.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Learning Curve
+    try:
+        cv = StratifiedKFold(n_splits=12)
+        sizes = np.linspace(0.3, 1.0, 10)
+        # Instantiate the classification model and visualizer
+        visualizer = LearningCurve(model, cv=cv, scoring='accuracy', train_sizes=sizes, n_jobs=4)
+        visualizer.fit(X_train, y_train)  # Fit the data to the visualizer
+        visualizer.show(outpath="learning_curve.png")  # Finalize and render the figure
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Feature Importances
+    try:
+        viz = FeatureImportances(model)
+        viz.fit(X_train, y_train)
+        viz.show(outpath="feature_importance.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    sourcepath = './'
+    sourcefiles = os.listdir(sourcepath)
+    destinationpath = modellingAnalysisPath
+    for file in sourcefiles:
+        if file.endswith('.png'):
+            shutil.move(os.path.join(sourcepath, file), os.path.join(destinationpath, file))

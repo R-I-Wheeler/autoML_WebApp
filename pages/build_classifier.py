@@ -6,16 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import shutil
-from sklearn.model_selection import StratifiedKFold
+
 from pycaret.classification import *
 from pycaret.utils import check_metric
-
-from yellowbrick.classifier import ClassificationReport
-from yellowbrick.classifier import ConfusionMatrix
-from yellowbrick.classifier import ROCAUC
-from yellowbrick.classifier import PrecisionRecallCurve
-from yellowbrick.model_selection import LearningCurve
-from yellowbrick.model_selection import FeatureImportances
 
 def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, combineLevels):
 
@@ -41,72 +34,9 @@ def build_model(ensembleSelect, metricSelect, numEstimators, numIterations, mode
     tuningData = pull(True)
     return tuned_model, tuningData
 
-def generate_classification_model_analysis(model, X_train, y_train, X_test, y_test, modellingAnalysisPath):
-    #Generate Confusion Matrix
-    try:
-        cm = ConfusionMatrix(model)
-        cm.fit(X_train, y_train)
-        cm.score(X_test, y_test)
-        cm.show(outpath="confusion_matrix.png")
-        plt.close()
-    except Exception as e:
-        print(e)
-    #Generate Area Under Curve
-    try:
-        visualizer = ROCAUC(model)
-        visualizer.fit(X_train, y_train)
-        visualizer.score(X_test, y_test)
-        visualizer.show(outpath="area_under_curve.png")
-        plt.close()
-    except Exception as e:
-        print(e)
-    #Generate classification report
-    try:
-        visualizer = ClassificationReport(model, support=True)
-        visualizer.fit(X_train, y_train)
-        visualizer.score(X_test, y_test)
-        visualizer.show(outpath="classification_report.png")
-        plt.close()
-    except Exception as e:
-        print(e)
-    #Generate Precision Recall Curve
-    try:
-        viz = PrecisionRecallCurve(model)
-        viz.fit(X_train, y_train)
-        viz.score(X_test, y_test)
-        viz.show(outpath="precison_recall_curve.png")
-        plt.close()
-    except Exception as e:
-        print(e)
-    #Generate Learning Curve
-    try:
-        cv = StratifiedKFold(n_splits=12)
-        sizes = np.linspace(0.3, 1.0, 10)
-        # Instantiate the classification model and visualizer
-        visualizer = LearningCurve(model, cv=cv, scoring='accuracy', train_sizes=sizes, n_jobs=4)
-        visualizer.fit(X_train, y_train)  # Fit the data to the visualizer
-        visualizer.show(outpath="learning_curve.png")  # Finalize and render the figure
-        plt.close()
-    except Exception as e:
-        print(e)
-    #Generate Feature Importances
-    try:
-        viz = FeatureImportances(model)
-        viz.fit(X_train, y_train)
-        viz.show(outpath="feature_importance.png")
-        plt.close()
-    except Exception as e:
-        print(e)
-    sourcepath = './'
-    sourcefiles = os.listdir(sourcepath)
-    destinationpath = modellingAnalysisPath
-    for file in sourcefiles:
-        if file.endswith('.png'):
-            shutil.move(os.path.join(sourcepath, file), os.path.join(destinationpath, file))
-
-
 def model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath, modellingModelPath, modellingAnalysisPath, log_list):
-
+    config = False
+    tuning = False
     st.title('AutoML '+modelType+' - Modelling')
     st.markdown(
         'The data from "Data Analysis" will now be used to develop a machine learning model. The data will first be split, 90% will be used for training and testing the model (split again 70/30) and 10% will be kept back as unseen data.')
@@ -141,8 +71,8 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.markdown('### Combine Rare Levels')
         st.markdown('Categorical features are combined when there frequency is below 10%')
         combineSelect = st.radio('Activate "Combine Rare Levels', ('Yes', 'No'), index=0)
-        submitted = st.form_submit_button("Submit")
-
+        if st.form_submit_button("Submit"):
+            config = True
         if normaliseMethod != 'none':
             activateNormalise = True
             log_list = amb.update_logging(log_list, 'Classifier Environment Configuration', 'Data Normalisation selected - '+normaliseMethod)
@@ -191,7 +121,9 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.markdown('A Sweetviz report comparing the data that will be used for training and testing during model development')
     log_list = amb.update_logging(log_list, 'Build Classifier',
                                   'Generating modelling and test data Sweetviz data comparison report')
-    amb.generate_sv(train, '', 'TrainingData',test, True, modellingReportsPath)
+
+    if not os.path.isfile(modellingReportsPath + 'TrainingData_Report.html') or config:
+        amb.generate_sv(train, '', 'TrainingData',test, True, modellingReportsPath)
     try:
         if os.path.isfile(modellingReportsPath + 'TrainingData_Report.html'):
             HtmlFile = open(modellingReportsPath + 'TrainingData_Report.html', 'r', encoding='utf-8')
@@ -230,7 +162,8 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                                   ('Accuracy', 'AUC', 'Recall', 'F1', 'Kappa', 'MCC'), index=0)
         if ensembleSelect == 'None':
             numIterations = st.slider('Maximum number of tuning iterations...',10,50, step=5)
-        submitted = st.form_submit_button("Submit")
+        if st.form_submit_button("Submit"):
+            tuning = True
 
     st.markdown('##### Model optimisation metric used = ' + metricSelect)
     log_list = amb.update_logging(log_list, 'Build Classifier',
@@ -244,6 +177,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.markdown ('##### Maximum number of tuning iterations = '+str(numIterations))
         log_list = amb.update_logging(log_list, 'Build Classifier',
                                       'Tuning Model - Maximum Number of tuning iterations = '+str(numIterations))
+
     log_list = amb.update_logging(log_list, 'Build Classifier',
                                   'Tuning Model - '+modelChange)
     tunedModel, tuningData = build_model(ensembleSelect, metricSelect, numEstimators, numIterations, modelChange)
@@ -262,13 +196,14 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.write(tuningData)
     amb.csv_to_html(tuningData, '#4B4B4B', modellingDataPath, 'Tuning_Results.html')
 
-    st.markdown ('### Model Analysis')
-    st.markdown ('Selection of plots to be used to evaluate the model')
-    X_train = train
-    y_train = get_config('y_train')
-    X_test = get_config('X_test')
-    y_test = get_config('y_test')
-    generate_classification_model_analysis(tunedModel, X_train, y_train, X_test, y_test, modellingAnalysisPath)
+    if not os.path.isfile(modellingAnalysisPath + "area_under_curve.png") or tuning:
+        st.markdown ('### Model Analysis')
+        st.markdown ('Selection of plots to be used to evaluate the model')
+        X_train = train
+        y_train = get_config('y_train')
+        X_test = get_config('X_test')
+        y_test = get_config('y_test')
+        amb.generate_classification_model_analysis(tunedModel, X_train, y_train, X_test, y_test, modellingAnalysisPath)
 
     filenames = os.listdir(modellingAnalysisPath)
     if filenames:
@@ -302,11 +237,13 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.pyplot(amb.prediction_confusion_matrix(unseen_predictions, target_att))
     except:
         st.write('This function is only available for binary classification')
+    plt.close()
 
     unseen_predictions.to_csv(modellingDataPath + 'UnseenPredictions.csv', index=False, )
     amb.csv_to_html(unseen_predictions, '#B000FD', modellingDataPath, 'UnseenPredictions.html')
     evaluationData.to_csv(modellingDataPath + 'Evaluation_Data.csv', index=False, )
     amb.csv_to_html(evaluationData, '#FD0000', modellingDataPath, 'Evaluation_Data.html')
+
     return log_list
 
 def app():
@@ -326,7 +263,6 @@ def app():
     plt.clf()
     st.session_state['log_list'] = log_list
 
-    #print(st.session_state['log_list'])
 
 
 

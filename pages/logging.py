@@ -24,7 +24,7 @@ def app():
     components.html(source_code, height=1000, scrolling=True)
 
     project_name = st.session_state['projectName']
-    shutil.make_archive(project_name, 'zip', './' + project_name)
+    shutil.make_archive(project_name, 'zip', './Projects/'+project_name)
     with open(project_name+".zip", "rb") as fp:
         btn = st.download_button(
             label="Download Project",
@@ -32,4 +32,4 @@ def app():
             file_name=project_name+".zip",
             mime="application/zip"
         )
-    shutil.make_archive(project_name, 'zip', './'+project_name)
+
