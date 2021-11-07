@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import shutil
+from pathlib import Path
 
 from pycaret.classification import *
 from pycaret.utils import check_metric
@@ -34,9 +35,22 @@ def build_model(ensembleSelect, metricSelect, numEstimators, numIterations, mode
     tuningData = pull(True)
     return tuned_model, tuningData
 
-def model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath, modellingModelPath, modellingAnalysisPath, log_list):
-    config = False
-    tuning = False
+def model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath, modellingModelPath, modellingAnalysisPath, log_list, dataEdited):
+    if 'class_config' not in st.session_state:
+        classConfig = False
+        st.session_state['class_config'] = classConfig
+
+    if 'class_tuning' not in st.session_state:
+        classTuning = False
+        st.session_state['class_tuning'] = classTuning
+
+    classConfig = st.session_state['class_config']
+    classTuning = st.session_state['class_tuning']
+
+    if dataEdited:
+        classTuning = True
+        classConfig = True
+
     st.title('AutoML '+modelType+' - Modelling')
     st.markdown(
         'The data from "Data Analysis" will now be used to develop a machine learning model. The data will first be split, 90% will be used for training and testing the model (split again 70/30) and 10% will be kept back as unseen data.')
@@ -71,24 +85,26 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.markdown('### Combine Rare Levels')
         st.markdown('Categorical features are combined when there frequency is below 10%')
         combineSelect = st.radio('Activate "Combine Rare Levels', ('Yes', 'No'), index=0)
-        if st.form_submit_button("Submit"):
-            config = True
-        if normaliseMethod != 'none':
-            activateNormalise = True
-            log_list = amb.update_logging(log_list, 'Classifier Environment Configuration', 'Data Normalisation selected - '+normaliseMethod)
-        else:
-            activateNormalise = False
-            normaliseMethod = 'zscore'
-        if transformMethod != 'none':
-            activateTransform = True
-            log_list = amb.update_logging(log_list, 'Classifier Environment Configuration', 'Data Transformation selected - ' + transformMethod)
-        else:
-            activateTransform = False
-            transformMethod = 'yeo-johnson'
-        if combineSelect != 'Yes':
-            combineLevels = False
-            log_list = amb.update_logging(log_list, 'Classifier Environment Configuration',
-                                          'Combine Rare Levels deactivated')
+        configSubmit = st.form_submit_button("Submit")
+    if configSubmit:
+        classConfig = True
+    if normaliseMethod != 'none':
+        activateNormalise = True
+        log_list = amb.update_logging(log_list, 'Classifier Environment Configuration', 'Data Normalisation selected - '+normaliseMethod)
+    else:
+        activateNormalise = False
+        normaliseMethod = 'zscore'
+    if transformMethod != 'none':
+        activateTransform = True
+        log_list = amb.update_logging(log_list, 'Classifier Environment Configuration', 'Data Transformation selected - ' + transformMethod)
+    else:
+        activateTransform = False
+        transformMethod = 'yeo-johnson'
+    if combineSelect != 'Yes':
+        combineLevels = False
+        log_list = amb.update_logging(log_list, 'Classifier Environment Configuration',
+                                      'Combine Rare Levels deactivated')
+
 
     st.session_state.activateNormalise = activateNormalise
     st.session_state.normaliseMethod = normaliseMethod
@@ -96,33 +112,53 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.session_state.transformMethod = transformMethod
     st.session_state.combineLevels = combineLevels
 
-    log_list = amb.update_logging(log_list, 'Build Classifier',
-                                  'Split dataset, 90 % for modelling, 10 % unseen prediction')
-    trainingData, evaluationData = amb.setup_modelling_data(workingData)
+    if classConfig:
+        file = open(modellingDataPath + "Modelling_Environment_Config.txt", "w")
+        file.write(str(activateNormalise) + "\n")
+        file.write(normaliseMethod + "\n")
+        file.write(str(activateTransform) + "\n")
+        file.write(transformMethod + "\n")
+        file.write(str(combineLevels) + "\n")
+        file.close()
 
-    log_list = amb.update_logging(log_list, 'Build Classifier',
-                                  'AutoML Environment Setup')
-    best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, combineLevels)
+    if not os.path.isfile(modellingDataPath+"Environment_Data.html") or classConfig or classTuning:
+        log_list = amb.update_logging(log_list, 'Build Classifier',
+                                      'Split dataset, 90 % for modelling, 10 % unseen prediction')
+        trainingData, evaluationData = amb.setup_modelling_data(workingData)
 
-    st.markdown('### AutoML Environment')
-    st.markdown('Table showing the configuration of the modelling environment')
-    st.dataframe(environmentData)
-    f = open(modellingDataPath+"Environment_Data.html", "w")
-    style_text = '<style>table {border-collapse: collapse;border-radius: 5px;box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);overflow: hidden;font-family: "Ariel", sans-serif;font-weight: bold;font-size: 14px;}th {background: #4B4B4B;color: #ffffff;text-align: left;}th,td {padding: 10px 20px;}tr:nth-child(even) {background: #eeeeee;}</style>\n'
-    f.write(style_text+environmentData.render())
-    f.close()
+        log_list = amb.update_logging(log_list, 'Build Classifier',
+                                      'AutoML Environment Setup')
+        best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, combineLevels)
 
-    st.markdown ('### Training Data')
-    st.markdown('The training data created during the environment setup to be used for developing the model.')
-    train = get_config('X_train')
-    st.dataframe(train)
+        st.markdown('### AutoML Environment')
+        st.markdown('Table showing the configuration of the modelling environment')
+        st.dataframe(environmentData)
+        f = open(modellingDataPath+"Environment_Data.html", "w")
+        style_text = '<style>table {border-collapse: collapse;border-radius: 5px;box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);overflow: hidden;font-family: "Ariel", sans-serif;font-weight: bold;font-size: 14px;}th {background: #4B4B4B;color: #ffffff;text-align: left;}th,td {padding: 10px 20px;}tr:nth-child(even) {background: #eeeeee;}</style>\n'
+        f.write(style_text+environmentData.render())
+        f.close()
+
+        st.markdown ('### Training Data')
+        st.markdown('The training data created during the environment setup to be used for developing the model.')
+        train = get_config('X_train')
+        st.dataframe(train)
+    else:
+        st.markdown('### AutoML Environment')
+        st.markdown('Table showing the configuration of the modelling environment')
+        my_file = Path(modellingDataPath+"Environment_Data.html")
+        if my_file.is_file():
+            HtmlFile = open(my_file, 'r', encoding='utf-8')
+            source_code = HtmlFile.read()
+            # print(source_code)
+            components.html(source_code, height=500, scrolling=True)
+
 
     st.markdown ('### Training & Test Data Comparison')
     st.markdown('A Sweetviz report comparing the data that will be used for training and testing during model development')
     log_list = amb.update_logging(log_list, 'Build Classifier',
                                   'Generating modelling and test data Sweetviz data comparison report')
 
-    if not os.path.isfile(modellingReportsPath + 'TrainingData_Report.html') or config:
+    if not os.path.isfile(modellingReportsPath + 'TrainingData_Report.html') or classConfig or classTuning:
         amb.generate_sv(train, '', 'TrainingData',test, True, modellingReportsPath)
     try:
         if os.path.isfile(modellingReportsPath + 'TrainingData_Report.html'):
@@ -135,9 +171,20 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
     st.markdown('### Model Comparison')
     st.markdown('A comparison table to evaluate all of the models that have been trained and tested')
-    st.markdown('All models within the model library were trained with scores generated using stratified cross validation for metric evaluation')
-    st.dataframe(modelComparison)
-    amb.csv_to_html(modelComparison, '#4B4B4B', modellingDataPath, 'Model_Comparison.html')
+    st.markdown(
+        'All models within the model library were trained with scores generated using stratified cross validation for metric evaluation')
+
+    if not os.path.isfile(modellingDataPath + 'Model_Comparison.html') or classConfig or classTuning:
+        st.dataframe(modelComparison)
+        amb.csv_to_html(modelComparison, '#4B4B4B', modellingDataPath, 'Model_Comparison.html')
+        modelComparison.to_csv(modellingDataPath + 'Model_Comparison.csv')
+    else:
+        my_file = Path(modellingDataPath + "Model_Comparison.html")
+        if my_file.is_file():
+            HtmlFile = open(my_file, 'r', encoding='utf-8')
+            source_code = HtmlFile.read()
+            # print(source_code)
+            components.html(source_code, height=500, scrolling=True)
 
     with st.form('model_config'):
         numIterations = 10
@@ -145,7 +192,11 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
         metricSelect = 'Accuracy'
 
-        modelList = modelComparison.index.tolist()
+        if not os.path.isfile(modellingDataPath + 'Model_Comparison.html') or 'modelComparison' in locals():
+            modelList = modelComparison.index.tolist()
+        else:
+            modelComparison = pd.read_csv(modellingDataPath + 'Model_Comparison.csv')
+            modelList = modelComparison['Unnamed: 0']
 
         st.markdown('## Model Configurator - Tuning')
         st.markdown('### Change Model')
@@ -162,41 +213,85 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                                   ('Accuracy', 'AUC', 'Recall', 'F1', 'Kappa', 'MCC'), index=0)
         if ensembleSelect == 'None':
             numIterations = st.slider('Maximum number of tuning iterations...',10,50, step=5)
-        if st.form_submit_button("Submit"):
-            tuning = True
+        tuningSubmit = st.form_submit_button("Submit")
 
-    st.markdown('##### Model optimisation metric used = ' + metricSelect)
-    log_list = amb.update_logging(log_list, 'Build Classifier',
-                                  'Tuning Model - Model optimisation metric  = '+metricSelect)
-    if ensembleSelect != 'None':
-        st.markdown ('##### Ensemble type = '+ensembleSelect)
-        st.markdown ('##### Number of estimators = '+str(numEstimators))
+    if tuningSubmit:
+        classTuning = True
+
+    if not os.path.isfile(modellingDataPath + "Tuning_Results.html") or classConfig or classTuning:
+        st.markdown('##### Model optimisation metric used = ' + metricSelect)
         log_list = amb.update_logging(log_list, 'Build Classifier',
-                                      'Tuning Model - Ensemble Type = '+ensembleSelect+' - Number of Estimators = '+str(numEstimators))
+                                      'Tuning Model - Model optimisation metric  = '+metricSelect)
+        if ensembleSelect != 'None':
+            st.markdown ('##### Ensemble type = '+ensembleSelect)
+            st.markdown ('##### Number of estimators = '+str(numEstimators))
+            log_list = amb.update_logging(log_list, 'Build Classifier',
+                                          'Tuning Model - Ensemble Type = '+ensembleSelect+' - Number of Estimators = '+str(numEstimators))
+        else:
+            st.markdown ('##### Maximum number of tuning iterations = '+str(numIterations))
+            log_list = amb.update_logging(log_list, 'Build Classifier',
+                                          'Tuning Model - Maximum Number of tuning iterations = '+str(numIterations))
+
+        log_list = amb.update_logging(log_list, 'Build Classifier',
+                                      'Tuning Model - '+modelChange)
+        if classTuning and not classConfig:
+            with open(modellingDataPath + "Modelling_Environment_Config.txt") as f:
+                lines = f.readlines()
+                if str(lines[0].strip()) == 'True':
+                    activateNormalise = True
+                else:
+                    activateNormalise = False
+                normaliseMethod = str(lines[1].strip())
+                if str(lines[2].strip()) == 'True':
+                    activateTransform = True
+                else:
+                    activateTransform = False
+                transformMethod = str(lines[3].strip())
+                if str(lines[4].strip()) == 'True':
+                    combineLevels = True
+                else:
+                    combineLevels = False
+
+            trainingData, evaluationData = amb.setup_modelling_data(workingData)
+            best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att,
+                                                                                    activateNormalise, normaliseMethod,
+                                                                                    activateTransform, transformMethod,
+                                                                                    combineLevels)
+        tunedModel, tuningData = build_model(ensembleSelect, metricSelect, numEstimators, numIterations, modelChange)
+
+        st.markdown('### AutoML Environment')
+        st.markdown('Table showing the configuration of the modelling environment')
+        st.dataframe(environmentData)
+
+        st.markdown ('### Best Model (Tuned)')
+        st.write(tunedModel)
+        log_list = amb.update_logging(log_list, 'Build Classifier',
+                                      'Best Model - '+str(tunedModel))
+        file = open(modellingModelPath + "model_description.txt", "w")
+        model_desc = repr(tunedModel)
+        file.write(model_desc + "\n")
+        file.close()
+
+        st.markdown ('### Model Tuning Results')
+        st.markdown('Shows the performance scores from training and testing the model whilst tuning for each fold')
+        st.write(tuningData)
+        amb.csv_to_html(tuningData, '#4B4B4B', modellingDataPath, 'Tuning_Results.html')
     else:
-        st.markdown ('##### Maximum number of tuning iterations = '+str(numIterations))
-        log_list = amb.update_logging(log_list, 'Build Classifier',
-                                      'Tuning Model - Maximum Number of tuning iterations = '+str(numIterations))
+        with open(modellingModelPath + "model_description.txt") as f:
+            contents = f.readlines()
+        st.markdown('### Best Model (Tuned)')
+        st.write(contents)
 
-    log_list = amb.update_logging(log_list, 'Build Classifier',
-                                  'Tuning Model - '+modelChange)
-    tunedModel, tuningData = build_model(ensembleSelect, metricSelect, numEstimators, numIterations, modelChange)
+        st.markdown('### Model Tuning Results')
+        st.markdown('Shows the performance scores from training and testing the model whilst tuning for each fold')
+        my_file = Path(modellingDataPath + "Tuning_Results.html")
+        if my_file.is_file():
+            HtmlFile = open(my_file, 'r', encoding='utf-8')
+            source_code = HtmlFile.read()
+            # print(source_code)
+            components.html(source_code, height=500, scrolling=True)
 
-    st.markdown ('### Best Model (Tuned)')
-    st.write(tunedModel)
-    log_list = amb.update_logging(log_list, 'Build Classifier',
-                                  'Best Model - '+str(tunedModel))
-    file = open(modellingModelPath + "model_description.txt", "w")
-    model_desc = repr(tunedModel)
-    file.write(model_desc + "\n")
-    file.close()
-
-    st.markdown ('### Model Tuning Results')
-    st.markdown('Shows the performance scores from training and testing the model whilst tuning for each fold')
-    st.write(tuningData)
-    amb.csv_to_html(tuningData, '#4B4B4B', modellingDataPath, 'Tuning_Results.html')
-
-    if not os.path.isfile(modellingAnalysisPath + "area_under_curve.png") or tuning:
+    if not os.path.isfile(modellingAnalysisPath + "area_under_curve.png") or classConfig or classTuning:
         st.markdown ('### Model Analysis')
         st.markdown ('Selection of plots to be used to evaluate the model')
         X_train = train
@@ -215,34 +310,52 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     else:
         st.markdown('No analysis plots are available for this model')
 
-    finalModel = finalize_model(tunedModel)
-    unseen_predictions = predict_model(finalModel, data=evaluationData)
+    if not os.path.isfile(modellingDataPath + "UnseenPredictions.html") or classConfig or classTuning:
+        finalModel = finalize_model(tunedModel)
+        unseen_predictions = predict_model(finalModel, data=evaluationData)
 
-    accuracy = check_metric(unseen_predictions[target_att], unseen_predictions['Label'], metric='Accuracy')
+        accuracy = check_metric(unseen_predictions[target_att], unseen_predictions['Label'], metric='Accuracy')
 
-    st.markdown('#### Model accuracy on unseen data = '+str(accuracy * 100)+'%')
-    log_list = amb.update_logging(log_list, 'Build Classifier',
-                                  'Model accuracy on unseen data = '+str(accuracy * 100)+'%')
+        st.markdown('#### Model accuracy on unseen data = '+str(accuracy * 100)+'%')
+        log_list = amb.update_logging(log_list, 'Build Classifier', 'Model accuracy on unseen data = '+str(accuracy * 100)+'%')
 
-    save_model(finalModel, modellingModelPath+projectName+'_finalised_model')
+        save_model(finalModel, modellingModelPath+projectName+'_finalised_model')
 
-    st.markdown('### Unseen Data Predictions')
-    st.markdown('The following table shows the unseen data and the predictions made by the final model')
-    st.markdown('The predicted value is in the column headed "label", the column headed "score" contains the probability of a positive outcome')
-    st.dataframe(unseen_predictions.astype('object'))
+        st.markdown('### Unseen Data Predictions')
+        st.markdown('The following table shows the unseen data and the predictions made by the final model')
+        st.markdown('The predicted value is in the column headed "label", the column headed "score" contains the probability of a positive outcome')
+        st.dataframe(unseen_predictions.astype('object'))
 
-    st.markdown('### Unseen Data Predictions - Confusion Matrix')
-    st.set_option('deprecation.showPyplotGlobalUse', False)
-    try:
-        st.pyplot(amb.prediction_confusion_matrix(unseen_predictions, target_att))
-    except:
-        st.write('This function is only available for binary classification')
-    plt.close()
+        st.markdown('### Unseen Data Predictions - Confusion Matrix')
+        st.set_option('deprecation.showPyplotGlobalUse', False)
+        try:
+            st.pyplot(amb.prediction_confusion_matrix(unseen_predictions, target_att))
+        except:
+            st.write('This function is only available for binary classification')
+        plt.close()
 
-    unseen_predictions.to_csv(modellingDataPath + 'UnseenPredictions.csv', index=False, )
-    amb.csv_to_html(unseen_predictions, '#B000FD', modellingDataPath, 'UnseenPredictions.html')
-    evaluationData.to_csv(modellingDataPath + 'Evaluation_Data.csv', index=False, )
-    amb.csv_to_html(evaluationData, '#FD0000', modellingDataPath, 'Evaluation_Data.html')
+        unseen_predictions.to_csv(modellingDataPath + 'UnseenPredictions.csv', index=False, )
+        amb.csv_to_html(unseen_predictions, '#B000FD', modellingDataPath, 'UnseenPredictions.html')
+        evaluationData.to_csv(modellingDataPath + 'Evaluation_Data.csv', index=False, )
+        amb.csv_to_html(evaluationData, '#FD0000', modellingDataPath, 'Evaluation_Data.html')
+    else:
+        st.markdown('### Unseen Data Predictions')
+        st.markdown('The following table shows the unseen data and the predictions made by the final model')
+        st.markdown(
+            'The predicted value is in the column headed "label", the column headed "score" contains the probability of a positive outcome')
+        my_file = Path(modellingDataPath + "UnseenPredictions.html")
+        if my_file.is_file():
+            HtmlFile = open(my_file, 'r', encoding='utf-8')
+            source_code = HtmlFile.read()
+            # print(source_code)
+            components.html(source_code, height=800, scrolling=True)
+
+        evaluationData = pd.read_csv(modellingDataPath + 'Evaluation_Data.csv')
+        finalModel = load_model(modellingModelPath+projectName+'_finalised_model')
+
+        unseen_predictions = predict_model(finalModel, data=evaluationData)
+        accuracy = check_metric(unseen_predictions[target_att], unseen_predictions['Label'], metric='Accuracy')
+        st.markdown('#### Model accuracy on unseen data = ' + str(accuracy * 100) + '%')
 
     return log_list
 
@@ -255,13 +368,19 @@ def app():
     modellingDataPath = st.session_state['modellingDataPath']
     modellingAnalysisPath = st.session_state['modellingAnalysisPath']
     log_list = st.session_state['log_list']
+    dataEdited = st.session_state['data_edited']
 
     workingData = pd.read_csv(modellingDataPath+'Modelling_Data.csv')
 
     log_list = model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath,
-                                       modellingModelPath, modellingAnalysisPath, log_list)
-    plt.clf()
+                                       modellingModelPath, modellingAnalysisPath, log_list, dataEdited)
+
+    st.session_state['data_edited'] = False
     st.session_state['log_list'] = log_list
+
+    plt.clf()
+
+
 
 
 

@@ -3,6 +3,7 @@ import pandas as pd
 import automlbuilder as amb
 import base64
 import shutil
+import os
 
 # Custom imports
 from multipage import MultiPage
@@ -61,6 +62,11 @@ def main():
         log_list = []
         st.session_state['log_list'] = log_list
 
+    if 'log_read' not in st.session_state:
+        log_read = False
+        st.session_state['log_read'] = log_read
+
+    log_read = st.session_state['log_read']
     log_list = st.session_state['log_list']
     # Title of the main page
     st.title("AutoML Model Builder")
@@ -70,57 +76,93 @@ def main():
     st.markdown('Once you have completed the setup the CSV file is saved to the project folder and the dataset is then cleaned by removing any attributes that contain all unique values such as ID columns or index columns, drops empty and single valued attributes as well as empty and duplicate rows of data and standardises the attribute names.')
     st.markdown('The cleaned dataset is then saved separately from the original data and will be used for analysis and modelling.')
 
-    st.sidebar.header("Project Setup")
-    uploaded_file = st.sidebar.file_uploader("Choose a csv file", type='csv')
-    if uploaded_file is not None:
-        uploadData = pd.read_csv(uploaded_file)
-        workingData = uploadData.copy()
-        projectName = st.sidebar.text_input('Name Project...', 'myProject')
-        modelType = st.sidebar.selectbox('Select Model Type:', ('Classification', 'Regression'))
-        workingData = amb.clean_data(workingData)
-        column_list = list(workingData.columns)
-        column_list.insert(0,'Select Target Attribute...')
-        target_att = st.sidebar.selectbox('Select Target Attribute:', (column_list))
-
-        if target_att == 'Select Target Attribute...':
-            st.stop()
-        else:
-            if modelType == 'Classification':
-                workingData[target_att] = workingData[target_att].astype('int32')
-
-        message = 'Project Name = '+projectName+' - Model Type = '+modelType+' - Target Attribute = '+target_att+' '
-        log_list = amb.update_logging(log_list, 'Project Setup', message)
-
-        analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath, modellingAnalysisPath, explainabilityPath = amb.generate_working_directories(projectName)
-        log_list = amb.update_logging(log_list, 'Project Setup', 'Project Folder Created')
-
-        uploadData.to_csv(dataPath + 'Original_Data.csv', index=False)
-        amb.csv_to_html(uploadData,'#FF7B7B',dataPath, 'Original_Data.html')
-        original_shape = uploadData.shape
-        log_list = amb.update_logging(log_list, 'Project Setup', 'Shape of Original Data - '+str(original_shape))
-
-        workingData.to_csv(dataPath + 'Clean_Data.csv', index=False)
-        amb.csv_to_html(workingData, '#519000', dataPath, 'Clean_Data.html')
-        clean_shape = workingData.shape
-        log_list = amb.update_logging(log_list, 'Project Setup', 'Shape of Cleaned Data - ' + str(clean_shape))
-
-        initiate_application_cache(modelType, target_att, projectName, dataPath, modellingModelPath,
-                                   modellingReportsPath, modellingDataPath, analysisReportsPath, analysisPlotsPath, modellingAnalysisPath, explainabilityPath)
-        #print(log_list)
-        st.session_state['log_list'] = log_list
-
-        # Add all your applications (pages) here
-        app.add_page("Data Analysis", data_analysis.app)
-        if modelType == 'Classification':
-            app.add_page("Classifier Model Builder", build_classifier.app)
-        else:
-            app.add_page("Regression Model Builder", build_regression.app)
-        app.add_page("Model Explainability", explainability.app)
-        app.add_page("Project Log", logging.app)
-        # The main app
-        app.run()
-    else:
+    st.sidebar.header("Setup")
+    selectProject = st.sidebar.selectbox('Project...', ('New','Existing'))
+    if selectProject == 'Project...':
         st.stop()
+    elif selectProject == 'New':
+        uploaded_file = st.sidebar.file_uploader("Choose a csv file", type='csv')
+        if uploaded_file is not None:
+            uploadData = pd.read_csv(uploaded_file)
+            workingData = uploadData.copy()
+            projectName = st.sidebar.text_input('Name Project...', 'myProject')
+            modelType = st.sidebar.selectbox('Select Model Type:', ('Classification', 'Regression'))
+            workingData = amb.clean_data(workingData)
+            column_list = list(workingData.columns)
+            column_list.insert(0,'Select Target Attribute...')
+            target_att = st.sidebar.selectbox('Select Target Attribute:', (column_list))
+
+            if target_att == 'Select Target Attribute...':
+                st.stop()
+            else:
+                if modelType == 'Classification':
+                    workingData[target_att] = workingData[target_att].astype('int32')
+
+            message = 'Project Name = '+projectName+' - Model Type = '+modelType+' - Target Attribute = '+target_att+' '
+            log_list = amb.update_logging(log_list, 'Project Setup', message)
+
+            analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath, modellingAnalysisPath, explainabilityPath = amb.generate_working_directories(projectName)
+            log_list = amb.update_logging(log_list, 'Project Setup', 'Project Folder Created')
+
+            uploadData.to_csv(dataPath + 'Original_Data.csv', index=False)
+            amb.csv_to_html(uploadData,'#FF7B7B',dataPath, 'Original_Data.html')
+            original_shape = uploadData.shape
+            log_list = amb.update_logging(log_list, 'Project Setup', 'Shape of Original Data - '+str(original_shape))
+
+            workingData.to_csv(dataPath + 'Clean_Data.csv', index=False)
+            amb.csv_to_html(workingData, '#519000', dataPath, 'Clean_Data.html')
+            clean_shape = workingData.shape
+            log_list = amb.update_logging(log_list, 'Project Setup', 'Shape of Cleaned Data - ' + str(clean_shape))
+
+            file = open(dataPath + "Project_Setup.txt", "w")
+            file.write(modelType + "\n")
+            file.write(target_att + "\n")
+            file.close()
+        else:
+            st.stop()
+    else:
+        searchPath ='./Projects'
+        directoryContent = os.listdir(searchPath)
+
+        for item in directoryContent:
+            if item == '.DS_Store':
+                directoryContent.remove(item)
+        directoryContent.insert(0,'Select Project...')
+
+        projectName = st.sidebar.selectbox('Select Existing Project:', (directoryContent))
+        if projectName != 'Select Project...':
+            lines = []
+            with open('./Projects/'+projectName+'/data/Project_Setup.txt') as f:
+                lines = f.readlines()
+                modelType = str(lines[0].strip())
+                target_att = str(lines[1].strip())
+
+            analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath, modellingAnalysisPath, explainabilityPath = amb.generate_working_directories(
+                projectName)
+            if not log_read:
+                loggingData = pd.read_csv(dataPath + 'Project_log.csv')
+                log_list = loggingData.values.tolist()
+                log_list = amb.update_logging(log_list, 'Project Setup', 'Load Existing Project - ' + projectName)
+                log_read = True
+        else:
+            st.stop()
+
+    initiate_application_cache(modelType, target_att, projectName, dataPath, modellingModelPath,
+                               modellingReportsPath, modellingDataPath, analysisReportsPath, analysisPlotsPath, modellingAnalysisPath, explainabilityPath)
+    #print(log_list)
+    st.session_state['log_list'] = log_list
+    st.session_state['log_read'] = log_read
+
+    # Add all your applications (pages) here
+    app.add_page("Data Analysis", data_analysis.app)
+    if modelType == 'Classification':
+        app.add_page("Classifier Model Builder", build_classifier.app)
+    else:
+        app.add_page("Regression Model Builder", build_regression.app)
+    app.add_page("Model Explainability", explainability.app)
+    app.add_page("Project Log", logging.app)
+    # The main app
+    app.run()
 
 if __name__ == "__main__":
     main()

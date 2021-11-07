@@ -3,18 +3,21 @@ import streamlit.components.v1 as components
 import pandas as pd
 from pathlib import Path
 import shutil
+import os
 
 import automlbuilder as amb
 
 def app():
-    #log_list = st.session_state['log_list']
+    log_list = st.session_state['log_list']
+
     #print(st.session_state['log_list'])
     dataPath = st.session_state['dataPath']
 
     st.markdown('# Project Log')
-    df = pd.DataFrame(st.session_state['log_list'], columns=['Main Task', 'Message', 'Timestamp'])
-    df = df.drop_duplicates(subset='Message', keep="first")
+    df = pd.DataFrame(log_list, columns=['Main Task', 'Message', 'Timestamp'])
+    #df = df.drop_duplicates(subset=['Message'], keep="first")
 
+    df.to_csv(dataPath + 'Project_log.csv', index=False)
     amb.csv_to_html(df, '#4B4B4B', dataPath, 'Project_log.html')
 
     my_file = Path(dataPath + 'Project_log.html')
@@ -32,4 +35,7 @@ def app():
             file_name=project_name+".zip",
             mime="application/zip"
         )
+    if btn:
+        os.remove(project_name+'.zip')
+
 

@@ -101,7 +101,7 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
             HtmlFile = open(analysisReportsPath+'OriginalData_Report.html', 'r', encoding='utf-8')
             source_code = HtmlFile.read()
             # print(source_code)
-            components.html(source_code, height=750, scrolling=True)
+            components.html(source_code, height=1000, scrolling=True)
         else:
             st.write('Failed to generate Sweetviz report')
             log_list = amb.update_logging(log_list, 'Data Analysis', 'Failed to generate Sweetviz report')
@@ -110,7 +110,7 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
             HtmlFile = open(analysisReportsPath + 'pp_OriginalData_Report.html', 'r', encoding='utf-8')
             source_code = HtmlFile.read()
             # print(source_code)
-            components.html(source_code, height=750, scrolling=True)
+            components.html(source_code, height=1000, scrolling=True)
         else:
             st.write ('Failed to generate Pandas Profile report')
             log_list = amb.update_logging(log_list, 'Data Analysis', 'Failed to generate Pandas Profile report')
@@ -134,7 +134,8 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
     plt.close()
 
     st.markdown('##### Select "' + modelType + ' Model Builder" in App Navigation to continue to Modelling.')
-    return log_list
+
+    return log_list, dataEdited
 
 def app():
     modelType = st.session_state['modelType']
@@ -145,13 +146,19 @@ def app():
     analysisPlotsPath = st.session_state['analysisPlotsPath']
     log_list = st.session_state['log_list']
 
+    if 'data_edited' not in st.session_state:
+        st.session_state['data_edited'] = False
+
     if os.path.isfile(modellingDataPath + 'Modelling_Data.csv'):
         workingData = pd.read_csv(modellingDataPath + 'Modelling_Data.csv')
     else:
         workingData = pd.read_csv(dataPath + 'Clean_Data.csv')
 
-    log_list = data_analysis(workingData, target_att, modelType, analysisPlotsPath, modellingDataPath, log_list, analysisReportsPath)
+    log_list, dataEdited = data_analysis(workingData, target_att, modelType, analysisPlotsPath, modellingDataPath, log_list, analysisReportsPath)
 
     st.session_state['log_list'] = log_list
+    st.session_state['data_edited'] = dataEdited
+
+
 
 
