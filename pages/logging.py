@@ -27,6 +27,18 @@ def app():
     components.html(source_code, height=1000, scrolling=True)
 
     project_name = st.session_state['projectName']
+
+    src_dir = 'HTML_Assets/'
+    dest_dir = 'Projects/'+project_name
+    files = os.listdir(src_dir)
+
+    # iterating over all the files in
+    # the source directory
+    for fname in files:
+        # copying the files to the
+        # destination directory
+        shutil.copy2(os.path.join(src_dir, fname), dest_dir)
+
     shutil.make_archive(project_name, 'zip', './Projects/'+project_name)
     with open(project_name+".zip", "rb") as fp:
         btn = st.download_button(

@@ -259,10 +259,6 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                                                                                     combineLevels)
         tunedModel, tuningData = build_model(ensembleSelect, metricSelect, numEstimators, numIterations, modelChange)
 
-        st.markdown('### AutoML Environment')
-        st.markdown('Table showing the configuration of the modelling environment')
-        st.dataframe(environmentData)
-
         st.markdown ('### Best Model (Tuned)')
         st.write(tunedModel)
         log_list = amb.update_logging(log_list, 'Build Classifier',

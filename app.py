@@ -66,8 +66,14 @@ def main():
         log_read = False
         st.session_state['log_read'] = log_read
 
+    if 'project_created' not in st.session_state:
+        projectCreated = False
+        st.session_state['project_created'] = projectCreated
+
     log_read = st.session_state['log_read']
     log_list = st.session_state['log_list']
+    projectCreated = st.session_state['project_created']
+
     # Title of the main page
     st.title("AutoML Model Builder")
     st.markdown('The "AutoML Model Builder" uses an open source machine learning library (PyCaret) to develop machine learning models within this no-code web application.')
@@ -99,25 +105,31 @@ def main():
                     workingData[target_att] = workingData[target_att].astype('int32')
 
             message = 'Project Name = '+projectName+' - Model Type = '+modelType+' - Target Attribute = '+target_att+' '
-            log_list = amb.update_logging(log_list, 'Project Setup', message)
+            if not projectCreated:
+                log_list = amb.update_logging(log_list, 'Project Setup', message)
 
             analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath, modellingAnalysisPath, explainabilityPath = amb.generate_working_directories(projectName)
-            log_list = amb.update_logging(log_list, 'Project Setup', 'Project Folder Created')
+            if not projectCreated:
+                log_list = amb.update_logging(log_list, 'Project Setup', 'Project Folder Created')
 
             uploadData.to_csv(dataPath + 'Original_Data.csv', index=False)
             amb.csv_to_html(uploadData,'#FF7B7B',dataPath, 'Original_Data.html')
             original_shape = uploadData.shape
-            log_list = amb.update_logging(log_list, 'Project Setup', 'Shape of Original Data - '+str(original_shape))
+            if not projectCreated:
+                log_list = amb.update_logging(log_list, 'Project Setup', 'Shape of Original Data - '+str(original_shape))
 
             workingData.to_csv(dataPath + 'Clean_Data.csv', index=False)
             amb.csv_to_html(workingData, '#519000', dataPath, 'Clean_Data.html')
             clean_shape = workingData.shape
-            log_list = amb.update_logging(log_list, 'Project Setup', 'Shape of Cleaned Data - ' + str(clean_shape))
+            if not projectCreated:
+                log_list = amb.update_logging(log_list, 'Project Setup', 'Shape of Cleaned Data - ' + str(clean_shape))
 
             file = open(dataPath + "Project_Setup.txt", "w")
             file.write(modelType + "\n")
             file.write(target_att + "\n")
             file.close()
+            projectCreated = True
+            st.session_state['project_created'] = projectCreated
         else:
             st.stop()
     else:

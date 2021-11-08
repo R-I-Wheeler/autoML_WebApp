@@ -29,6 +29,8 @@ from yellowbrick.classifier import ROCAUC
 from yellowbrick.classifier import PrecisionRecallCurve
 from yellowbrick.model_selection import LearningCurve
 from yellowbrick.model_selection import FeatureImportances
+from yellowbrick.regressor import ResidualsPlot
+from yellowbrick.regressor import PredictionError
 
 # Function to Read and Manipulate Images
 def load_image(img):
@@ -349,6 +351,48 @@ def generate_classification_model_analysis(model, X_train, y_train, X_test, y_te
         viz = FeatureImportances(model)
         viz.fit(X_train, y_train)
         viz.show(outpath="feature_importance.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    sourcepath = './'
+    sourcefiles = os.listdir(sourcepath)
+    destinationpath = modellingAnalysisPath
+    for file in sourcefiles:
+        if file.endswith('.png'):
+            shutil.move(os.path.join(sourcepath, file), os.path.join(destinationpath, file))
+
+def generate_regression_model_analysis(model, X_train, y_train, X_test, y_test, modellingAnalysisPath):
+    #Generate Residuals plot
+    try:
+        visualizer = ResidualsPlot(model, hist=False, qqplot=True)
+        visualizer.fit(X_train, y_train)
+        visualizer.score(X_test, y_test)
+        visualizer.show(outpath="residuals_plot.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Prediction Error
+    try:
+        visualizer = PredictionError(model)
+        visualizer.fit(X_train, y_train)
+        visualizer.score(X_test, y_test)
+        visualizer.show(outpath="prediction_error.png")
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Learning Curve
+    try:
+        visualizer = LearningCurve(model, scoring='r2')
+        visualizer.fit(X_train, y_train)  # Fit the data to the visualizer
+        visualizer.show(outpath="learning_curve")  # Finalize and render the figure
+        plt.close()
+    except Exception as e:
+        print(e)
+    #Generate Feature Importances
+    try:
+        viz = FeatureImportances(model)
+        viz.fit(X_train, y_train)
+        viz.show(outpath="feature_importance")
         plt.close()
     except Exception as e:
         print(e)
