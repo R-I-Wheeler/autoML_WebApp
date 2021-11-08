@@ -11,10 +11,10 @@ from pathlib import Path
 from pycaret.classification import *
 from pycaret.utils import check_metric
 
-def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, combineLevels):
+def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, fixImbalance, combineLevels):
 
     envSetup = setup(data=trainingData, target=target_att, session_id=42, normalize=activateNormalise, normalize_method=normaliseMethod, transformation=activateTransform, transformation_method=transformMethod,
-                         combine_rare_levels=combineLevels, silent=True)
+                         fix_imbalance=fixImbalance, combine_rare_levels=combineLevels, silent=True)
     environmentData = pull(True)
     best_model = compare_models()
     modelComparison = pull(True)
@@ -61,6 +61,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     normaliseMethod = st.session_state.normaliseMethod
     activateTransform = st.session_state.activateTransform
     transformMethod = st.session_state.transformMethod
+    fixImbalance =  st.session_state.fixImbalance
     combineLevels = st.session_state.combineLevels
 
     with st.form('environment_config'):
@@ -82,9 +83,12 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.markdown('Makes the data more Gaussian, normalising the distribution. Does not include the target attribute')
         transformMethod = st.selectbox('Select transform method to be used...',
                                        ('none', 'yeo-johnson', 'quantile'), 0)
+        st.markdown('### Fix Imbalance')
+        st.markdown('Uses SMOTE (Synthetic Minority Over-sampling Technique) to fix an unequal distribution of the target attribute by creating new synthetic datapoints for the minority class')
+        imbalanceSelect = st.radio('Activate "Fix Imbalance"', ('Yes', 'No'), index=1)
         st.markdown('### Combine Rare Levels')
-        st.markdown('Categorical features are combined when there frequency is below 10%')
-        combineSelect = st.radio('Activate "Combine Rare Levels', ('Yes', 'No'), index=0)
+        st.markdown('Categorical features created during environment setup are combined when there frequency is below 10%')
+        combineSelect = st.radio('Activate "Combine Rare Levels"', ('Yes', 'No'), index=0)
         configSubmit = st.form_submit_button("Submit")
     if configSubmit:
         classConfig = True
@@ -100,6 +104,10 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     else:
         activateTransform = False
         transformMethod = 'yeo-johnson'
+    if imbalanceSelect != 'No':
+        fixImbalance = True
+        log_list = amb.update_logging(log_list, 'Classifier Environment Configuration',
+                                      'Fix Imbalance Activated')
     if combineSelect != 'Yes':
         combineLevels = False
         log_list = amb.update_logging(log_list, 'Classifier Environment Configuration',
@@ -110,6 +118,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.session_state.normaliseMethod = normaliseMethod
     st.session_state.activateTransform = activateTransform
     st.session_state.transformMethod = transformMethod
+    st.session_state.fixImbalance = fixImbalance
     st.session_state.combineLevels = combineLevels
 
     if classConfig:
@@ -118,6 +127,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         file.write(normaliseMethod + "\n")
         file.write(str(activateTransform) + "\n")
         file.write(transformMethod + "\n")
+        file.write(str(fixImbalance) + "\n")
         file.write(str(combineLevels) + "\n")
         file.close()
 
@@ -128,7 +138,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
         log_list = amb.update_logging(log_list, 'Build Classifier',
                                       'AutoML Environment Setup')
-        best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, combineLevels)
+        best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, fixImbalance, combineLevels)
 
         st.markdown('### AutoML Environment')
         st.markdown('Table showing the configuration of the modelling environment')
@@ -155,11 +165,11 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
     st.markdown ('### Training & Test Data Comparison')
     st.markdown('A Sweetviz report comparing the data that will be used for training and testing during model development')
-    log_list = amb.update_logging(log_list, 'Build Classifier',
-                                  'Generating modelling and test data Sweetviz data comparison report')
 
     if not os.path.isfile(modellingReportsPath + 'TrainingData_Report.html') or classConfig or classTuning:
         amb.generate_sv(train, '', 'TrainingData',test, True, modellingReportsPath)
+        log_list = amb.update_logging(log_list, 'Build Classifier',
+                                      'Generating modelling and test data Sweetviz data comparison report')
     try:
         if os.path.isfile(modellingReportsPath + 'TrainingData_Report.html'):
             HtmlFile = open(modellingReportsPath + 'TrainingData_Report.html', 'r', encoding='utf-8')
@@ -248,6 +258,10 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                     activateTransform = False
                 transformMethod = str(lines[3].strip())
                 if str(lines[4].strip()) == 'True':
+                    fixImbalance = True
+                else:
+                    fixImbalance = False
+                if str(lines[5].strip()) == 'True':
                     combineLevels = True
                 else:
                     combineLevels = False
@@ -256,7 +270,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
             best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att,
                                                                                     activateNormalise, normaliseMethod,
                                                                                     activateTransform, transformMethod,
-                                                                                    combineLevels)
+                                                                                    fixImbalance, combineLevels)
         tunedModel, tuningData = build_model(ensembleSelect, metricSelect, numEstimators, numIterations, modelChange)
 
         st.markdown ('### Best Model (Tuned)')

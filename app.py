@@ -53,6 +53,8 @@ def initiate_application_cache(modelType, target_att, projectName, dataPath, mod
         st.session_state['targetTransform'] = False
     if 'targetMethod' not in st.session_state:
         st.session_state['targetMethod'] = 'box-cox'
+    if 'fixImbalance' not in st.session_state:
+        st.session_state['fixImbalance'] = False
     if 'combineLevels' not in st.session_state:
         st.session_state['combineLevels'] = True
 
@@ -152,10 +154,13 @@ def main():
             analysisPlotsPath, analysisReportsPath, modellingDataPath, modellingReportsPath, modellingModelPath, dataPath, modellingAnalysisPath, explainabilityPath = amb.generate_working_directories(
                 projectName)
             if not log_read:
-                loggingData = pd.read_csv(dataPath + 'Project_log.csv')
-                log_list = loggingData.values.tolist()
-                log_list = amb.update_logging(log_list, 'Project Setup', 'Load Existing Project - ' + projectName)
-                log_read = True
+                try:
+                    loggingData = pd.read_csv(dataPath + 'Project_log.csv')
+                    log_list = loggingData.values.tolist()
+                    log_list = amb.update_logging(log_list, 'Project Setup', 'Load Existing Project - ' + projectName)
+                    log_read = True
+                except:
+                    log_list = st.session_state['log_list']
         else:
             st.stop()
 
