@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+    <title>Modelling - Classification - Model Analysis Visualisations</title>
+  </head>
+  <body bgcolor=rgba(255,255,255,0.00)>
+	<center>
+		<h1>Classification - Model Analysis Visualisations</h1>
+		<h4>The following plots may be used to analyse the performance of the model.</h4>
+		<h5>Click to the left or right of an image to change</h5>
+	</center>
+	<div id="carouselExampleControls" class="carousel slide" data-bs-ride="carousel" data-bs-interval=false>
+	  <div class="carousel-inner">
+		<div class="carousel-item active">
+		  <img src="modelling/analysis/area_under_curve.png" class="d-block w-100" alt="...">
+		  <center>
+			<h5>Receiving Operating Charachteristic/Area Under the Curve</h5>
+		  	<p>The Receiver Operating Characteristic (ROC) is a measure of a classifier’s predictive quality that compares and visualizes the tradeoff between the model’s sensitivity and specificity. The ideal point is therefore the top-left corner of the plot: false positives are zero and true positives are one.</p>
+		  </center>
+		</div>
+		<div class="carousel-item">
+		  <img src="modelling/analysis/classification_report.png" class="d-block w-100" alt="...">
+		  <center>
+			<h5>Classification Report</h5>
+		  	<p>Precision - for all instances classified as positive, what percentage were correct.</p>
+			<p>Recall - for all instance that are actually positive, what percentage was classified correctly.</p>
+			<p>F1 Score - a weighted harmonic mean of Precision and Recall, the best score is 1.0, the worst is 0.0</p>
+			<p>Support - the number of actual occurences of the class within the dataset</p>
+		  </center>
+		</div>
+		<div class="carousel-item">
+		  <img src="modelling/analysis/confusion_matrix.png" class="d-block w-100" alt="...">
+		  <center>
+			<h5>Confusion Matrix</h5>
+		  	<p>Shows a comparison between the test values predicted classes and their actual classes.</p>
+		  </center>
+		</div>
+		<div class="carousel-item">
+		  <img src="modelling/analysis/feature_importance.png" class="d-block w-100" alt="...">
+		  <center>
+			<h5>Feature Importance</h5>
+		  	<p>The features are ranked according to the explained variance each feature contributes to the model.</p>
+		  </center>
+		</div>
+		<div class="carousel-item">
+		  <img src="modelling/analysis/learning_curve.png" class="d-block w-100" alt="...">
+		  <center>
+			<h5>Learning Curve</h5>
+			<p>If the training and cross-validation scores converge together as more data is added, then the model will probably not benefit from more data. If the training score is much greater than the validation score then the model probably requires more training examples in order to generalize more effectively. Variability during cross-validation is shown with the shaded areas that represent a standard deviation above and below the mean for all cross-validations. If the model suffers from error due to bias, then there will likely be more variability around the training score curve. If the model suffers from error due to variance, then there will be more variability around the cross validated score.</p>
+		  </center>
+		</div>
+		<div class="carousel-item">
+		  <img src="modelling/analysis/precison_recall_curve.png" class="d-block w-100" alt="...">
+		  <center>
+			<h5>Precision Recall Curve</h5>
+		  	<p>Shows the tradeoff between a classifier’s precision, a measure of result relevancy, and recall, a measure of completeness..</p>
+		  </center>
+		</div>
+	  </div>
+	  <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="prev">
+		<span class="carousel-control-prev-icon" aria-hidden="true"></span>
+		<span class="visually-hidden">Previous</span>
+	  </button>
+	  <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="next">
+		<span class="carousel-control-next-icon" aria-hidden="true"></span>
+		<span class="visually-hidden">Next</span>
+	  </button>
+	</div>
+    <!-- Optional JavaScript; choose one of the two! -->
+
+    <!-- Option 1: Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
+    <!-- Option 2: Separate Popper and Bootstrap JS -->
+    <!--
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
+    -->
+  </body>
+</html>
