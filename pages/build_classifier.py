@@ -121,7 +121,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.session_state.fixImbalance = fixImbalance
     st.session_state.combineLevels = combineLevels
 
-    if classConfig:
+    if not os.path.isfile(modellingDataPath + "Modelling_Environment_Config.txt") or classConfig:
         file = open(modellingDataPath + "Modelling_Environment_Config.txt", "w")
         file.write(str(activateNormalise) + "\n")
         file.write(normaliseMethod + "\n")
