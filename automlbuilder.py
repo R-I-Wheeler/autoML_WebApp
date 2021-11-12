@@ -364,7 +364,7 @@ def generate_classification_model_analysis(model, X_train, y_train, X_test, y_te
 def generate_regression_model_analysis(model, X_train, y_train, X_test, y_test, modellingAnalysisPath):
     #Generate Residuals plot
     try:
-        visualizer = ResidualsPlot(model, hist=False, qqplot=True)
+        visualizer = ResidualsPlot(model, hist=True)
         visualizer.fit(X_train, y_train)
         visualizer.score(X_test, y_test)
         visualizer.show(outpath="residuals_plot.png")

@@ -10,7 +10,7 @@ from scipy.stats import norm
 
 import automlbuilder as amb
 
-def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modellingDataPath, log_list, analysisReportsPath):
+def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modellingDataPath, log_list, analysisReportsPath, dataPath):
     dataEdited = False
     log_list = amb.update_logging(log_list, 'Data Analysis', 'Starting Data Analysis')
     st.title('AutoML ' + modelType + ' - Data Analysis')
@@ -20,6 +20,8 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
 
     with st.form('drop_columns'):
         st.markdown('## Data Configurator')
+        st.markdown('#### Reset to original data')
+        resetSelect = st.radio('Reset to original data', ('Yes', 'No'), index=1)
         st.markdown('#### Select columns to drop from dataset...')
         dataColumns = list(workingData.columns)
         dataColumns.remove(target_att)
@@ -37,6 +39,8 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
         submitted = st.form_submit_button("Submit")
         if submitted:
             editedData = workingData.copy()
+            if resetSelect == 'Yes':
+                editedData = pd.read_csv(dataPath + 'Clean_Data.csv')
             if dropSelect != None:
                 editedData.drop(dropSelect, axis=1, inplace=True)
                 log_list = amb.update_logging(log_list, 'Data Analysis', 'Dropping selected columns - '+str(dropSelect))
@@ -154,7 +158,7 @@ def app():
     else:
         workingData = pd.read_csv(dataPath + 'Clean_Data.csv')
 
-    log_list, dataEdited = data_analysis(workingData, target_att, modelType, analysisPlotsPath, modellingDataPath, log_list, analysisReportsPath)
+    log_list, dataEdited = data_analysis(workingData, target_att, modelType, analysisPlotsPath, modellingDataPath, log_list, analysisReportsPath, dataPath)
 
     st.session_state['log_list'] = log_list
     st.session_state['data_edited'] = dataEdited

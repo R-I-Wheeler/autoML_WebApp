@@ -55,6 +55,10 @@ def initiate_application_cache(modelType, target_att, projectName, dataPath, mod
         st.session_state['targetMethod'] = 'box-cox'
     if 'fixImbalance' not in st.session_state:
         st.session_state['fixImbalance'] = False
+    if 'featureInteraction' not in st.session_state:
+        st.session_state['featureInteraction'] = False
+    if 'featureRatio' not in st.session_state:
+        st.session_state['featureRatio'] = False
     if 'combineLevels' not in st.session_state:
         st.session_state['combineLevels'] = True
 

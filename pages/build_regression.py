@@ -11,12 +11,12 @@ from pathlib import Path
 from pycaret.regression import *
 from pycaret.utils import check_metric
 
-def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod,  targetTransform, targetMethod, combineLevels):
+def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod,  targetTransform, targetMethod, combineLevels, featureInteraction, featureRatio):
 
     envSetup = setup(data=trainingData, target=target_att, session_id=42, normalize=activateNormalise, normalize_method=normaliseMethod, transformation=activateTransform, transformation_method=transformMethod,
-                         transform_target=targetTransform, transform_target_method=targetMethod, combine_rare_levels=combineLevels, silent=True)
+                         transform_target=targetTransform, transform_target_method=targetMethod, combine_rare_levels=combineLevels, feature_interaction=featureInteraction, feature_ratio=featureRatio, silent=True)
     environmentData = pull(True)
-    best_model = compare_models()
+    best_model = compare_models(exclude=['catboost'])
     modelComparison = pull(True)
     train = get_config('X_train')
     test = get_config('X_test')
@@ -25,14 +25,15 @@ def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, ac
 
 def build_model(ensembleSelect, metricSelect, numEstimators, numIterations, modelChange):
     model = create_model(modelChange)
+    tuned_model = tune_model(model, early_stopping=True, optimize=metricSelect, choose_better=True,
+                             n_iter=numIterations)
     if ensembleSelect != 'None':
-        tuned_model = ensemble_model(model, method=ensembleSelect, optimize=metricSelect, choose_better=True,
+        built_model = ensemble_model(tuned_model, method=ensembleSelect, optimize=metricSelect, choose_better=True,
                                      n_estimators=numEstimators)
     else:
-        tuned_model = tune_model(model, early_stopping=True, optimize=metricSelect, choose_better=True,
-                                 n_iter=numIterations)
+        built_model = tuned_model
     tuningData = pull(True)
-    return tuned_model, tuningData
+    return built_model, tuningData
 
 def model_development(workingData, target_att, modelType, modellingReportsPath, projectName, modellingDataPath, modellingModelPath, modellingAnalysisPath, log_list, dataEdited):
     if 'regress_config' not in st.session_state:
@@ -63,6 +64,8 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     targetTransform = st.session_state.targetTransform
     targetMethod = st.session_state.targetMethod
     combineLevels = st.session_state.combineLevels
+    featureInteraction = st.session_state.featureInteraction
+    featureRatio = st.session_state.featureRatio
 
     with st.form('environment_config'):
         st.markdown('## AutoML Environment Configuration')
@@ -87,6 +90,15 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.markdown('Transform the target attribute')
         targetMethod = st.selectbox('Select transform method to be used...',
                                     ('none', 'yeo-johnson', 'box-cox'), 0)
+        st.markdown('### Feature Interaction')
+        st.markdown(
+            'Creates new attributes by interacting (a * b) for all numeric variables in the dataset ')
+        interactionSelect = st.radio('Activate "Feature Interaction"', ('Yes', 'No'), index=1)
+        st.markdown('### Feature Ratio')
+        st.markdown(
+            'Creates new attributes by interacting (a / b) for all numeric variables in the dataset ')
+        ratioSelect = st.radio('Activate "Feature Ratio"', ('Yes', 'No'), index=1)
+
         st.markdown('### Combine Rare Levels')
         st.markdown('Categorical features are combined when there frequency is below 10%')
         combineSelect = st.radio('Activate "Combine Rare Levels', ('Yes', 'No'), index=0)
@@ -116,10 +128,24 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     else:
         targetTransform = False
         targetMethod = 'box-cox'
+    if interactionSelect != 'No':
+        featureInteraction = True
+        log_list = amb.update_logging(log_list, 'Classifier Environment Configuration',
+                                      'Feature Interaction Activated')
+    else:
+        featureInteraction = False
+    if ratioSelect != 'No':
+        featureRatio = True
+        log_list = amb.update_logging(log_list, 'Classifier Environment Configuration',
+                                      'Feature Ratio Activated')
+    else:
+        featureRatio = False
     if combineSelect != 'Yes':
         combineLevels = False
         log_list = amb.update_logging(log_list, 'Regression Environment Configuration',
                                       'Combine Rare Levels deactivated')
+    else:
+        combineLevels = True
 
     st.session_state.activateNormalise = activateNormalise
     st.session_state.normaliseMethod = normaliseMethod
@@ -128,6 +154,8 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.session_state.targetTransform = targetTransform
     st.session_state.targetMethod = targetMethod
     st.session_state.combineLevels = combineLevels
+    st.session_state.featureInteraction = featureInteraction
+    st.session_state.featureRatio = featureRatio
 
     if not os.path.isfile(modellingDataPath + "Modelling_Environment_Config.txt") or regressConfig:
         file = open(modellingDataPath + "Modelling_Environment_Config.txt", "w")
@@ -137,6 +165,8 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         file.write(transformMethod + "\n")
         file.write(str(targetTransform) + "\n")
         file.write(targetMethod + "\n")
+        file.write(str(interactionSelect) + "\n")
+        file.write(str(ratioSelect) + "\n")
         file.write(str(combineLevels) + "\n")
         file.close()
 
@@ -151,7 +181,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                                                                                 activateNormalise, normaliseMethod,
                                                                                 activateTransform, transformMethod,
                                                                                 targetTransform, targetMethod,
-                                                                                combineLevels)
+                                                                                combineLevels, featureInteraction, featureRatio)
 
         st.markdown('### AutoML Environment')
         st.markdown('Table showing the configuration of the modelling environment')
@@ -222,6 +252,10 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.markdown('## Model Tuning Configuration')
         st.markdown('### Change Model')
         modelChange = st.selectbox('Select model to be used...', modelList)
+        st.markdown('### Optimisation Metric')
+        metricSelect = st.radio('Select metric used to optimize model during tuning',
+                                ('MAE', 'MSE', 'RMSE', 'R2', 'RMSLE', 'MAPE'), index=3)
+        numIterations = st.slider('Maximum number of tuning iterations...', 10, 50, step=5)
         st.markdown('### Use Ensemble Model')
         st.markdown('Ensembling model is a common technique used for improving performance of a model')
         st.markdown(
@@ -229,14 +263,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.markdown(
             'Boosting - is an ensemble meta-algorithm used primarily for reducing bias and variance in supervised learning. ')
         ensembleSelect = st.radio('Select Ensemble type', ('None', 'Bagging', 'Boosting'), index=0)
-        if ensembleSelect != 'None':
-            numEstimators = st.slider('Increase number of estimators used...', 10, 500, step=10)
-        st.markdown('### Optimisation Metric')
-
-        metricSelect = st.radio('Select metric used to optimize model during tuning',
-                                ('MAE', 'MSE', 'RMSE', 'R2', 'RMSLE', 'MAPE'), index=3)
-        if ensembleSelect == 'None':
-            numIterations = st.slider('Maximum number of tuning iterations...', 10, 50, step=5)
+        numEstimators = st.slider('Increase number of estimators used...', 10, 500, step=10)
         tuningSubmit = st.form_submit_button("Submit")
 
     if tuningSubmit:
@@ -244,21 +271,17 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
     if not os.path.isfile(modellingDataPath + "Tuning_Results.html") or regressConfig or regressTuning:
         st.markdown('##### Model optimisation metric used = ' + metricSelect)
+        st.markdown('##### Maximum number of tuning iterations = ' + str(numIterations))
         log_list = amb.update_logging(log_list, 'Build Regression',
-                                      'Tuning Model - Model optimisation metric  = '+metricSelect)
+                                      'Tuning Model - Maximum Number of tuning iterations = ' + str(numIterations))
+        log_list = amb.update_logging(log_list, 'Build Regression',
+                                      'Tuning Model - Optimisation metric = ' + metricSelect)
         if ensembleSelect != 'None':
             st.markdown ('##### Ensemble type = '+ensembleSelect)
             st.markdown ('##### Number of estimators = '+str(numEstimators))
             log_list = amb.update_logging(log_list, 'Build Regression',
                                           'Tuning Model - Ensemble Type = ' + ensembleSelect + ' - Number of Estimators = ' + str(
                                               numEstimators))
-        else:
-            st.markdown ('##### Maximum number of tuning iterations = '+str(numIterations))
-            log_list = amb.update_logging(log_list, 'Build Regression',
-                                          'Tuning Model - Maximum Number of tuning iterations = ' + str(numIterations))
-            log_list = amb.update_logging(log_list, 'Build Regression',
-                                          'Tuning Model - Optimisation metric = ' + metricSelect)
-
         log_list = amb.update_logging(log_list, 'Build Regression',
                                       'Tuning Model - '+modelChange)
         if regressTuning and not regressConfig:
@@ -280,6 +303,14 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                     targetTransform = False
                 targetMethod = str(lines[5].strip())
                 if str(lines[6].strip()) == 'True':
+                    featureInteraction = True
+                else:
+                    featureInteraction = False
+                if str(lines[7].strip()) == 'True':
+                    ratioSelect = True
+                else:
+                    ratioSelect = False
+                if str(lines[8].strip()) == 'True':
                     combineLevels = True
                 else:
                     combineLevels = False
@@ -289,7 +320,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                                                                                     activateNormalise, normaliseMethod,
                                                                                     activateTransform, transformMethod,
                                                                                     targetTransform, targetMethod,
-                                                                                    combineLevels)
+                                                                                    combineLevels, featureInteraction, featureRatio)
         tunedModel, tuningData = build_model(ensembleSelect, metricSelect, numEstimators, numIterations, modelChange)
 
         st.markdown ('### Best Model (Tuned)')
@@ -353,6 +384,8 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
         st.markdown('### Unseen Data Predictions')
         st.markdown('The following table shows the unseen data and the predictions made by the final model')
+        st.markdown(
+            'Note: The final model used for predicitions is re-trained using all of the modelling data (both training and test data)')
         st.markdown('The predicted value is in the column headed "label", the column headed "score" contains the probability of a positive outcome')
         st.dataframe(unseen_predictions.astype('object'))
 
