@@ -361,6 +361,8 @@ def generate_classification_model_analysis(model, X_train, y_train, X_test, y_te
         if file.endswith('.png'):
             shutil.move(os.path.join(sourcepath, file), os.path.join(destinationpath, file))
 
+
+# noinspection PyPackageRequirements
 def generate_regression_model_analysis(model, X_train, y_train, X_test, y_test, modellingAnalysisPath):
     #Generate Residuals plot
     try:

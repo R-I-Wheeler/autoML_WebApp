@@ -4,6 +4,7 @@ import automlbuilder as amb
 import base64
 import shutil
 import os
+from pandas.api.types import is_numeric_dtype
 
 # Custom imports
 from multipage import MultiPage
@@ -108,7 +109,8 @@ def main():
                 st.stop()
             else:
                 if modelType == 'Classification':
-                    workingData[target_att] = workingData[target_att].astype('int32')
+                    if is_numeric_dtype(workingData[target_att]):
+                        workingData[target_att] = workingData[target_att].astype('int32')
 
             message = 'Project Name = '+projectName+' - Model Type = '+modelType+' - Target Attribute = '+target_att+' '
             if not projectCreated:

@@ -8,6 +8,10 @@ from pandas.api.types import is_numeric_dtype
 import numpy as np
 from scipy.stats import norm
 
+from optbinning import OptimalBinning
+from optbinning import ContinuousOptimalBinning
+from optbinning import MulticlassOptimalBinning
+
 import automlbuilder as amb
 
 def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modellingDataPath, log_list, analysisReportsPath, dataPath):
@@ -29,6 +33,11 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
         st.markdown('#### Select columns to apply log transformation (numeric only)...')
         st.markdown('Data that does not have a "Normal Distribution" can effect how a machine learning model works. This function applies a log transformation upon the data of the selected attribute(s). You can also use functionality in the model environment setup to apply normalisation to all attributes.')
         normaliseSelect = st.multiselect('Select columns...', dataColumns, key='normalise_Columns')
+        st.markdown('#### Optimal Binning')
+        st.markdown('A new categorical attribute will be created using a rigorous and flexible mathematical programming formulation based upon the selected attributes realtionship with the target attribute')
+        binSelect = st.multiselect('Select columns...', dataColumns, key='bin_Columns')
+        if modelType == 'Classification':
+            isMultiClass = st.radio('Is this a multiclass problem',('Yes','No'), index=1)
         st.markdown('#### One-Hot Encode data columns...')
         st.markdown('A new binary attribute will be created for each unique value within the selected attribute.')
         dummySelect = st.multiselect('Select columns...', dataColumns, key='dummy_Columns')
@@ -64,6 +73,42 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
                         st.pyplot(fig)
                         log_list = amb.update_logging(log_list, 'Data Analysis',
                                                       'Applying log transform to '+col+': skew after log transformation =' + str(editedData[col].skew()))
+            st.write(str(binSelect))
+            if binSelect != None:
+                for col in binSelect:
+                    st.write('Optimal Binning: - '+col)
+                    variable = col
+                    x = editedData[variable].values
+                    y = editedData[target_att].values
+
+                    if modelType == 'Classification':
+                        if isMultiClass == 'Yes':
+                            optb = MulticlassOptimalBinning(name=variable, solver="cp")
+                        else:
+                            if is_numeric_dtype(editedData[col]):
+                                optb = OptimalBinning(name=variable, dtype="numerical", solver="cp")
+                            else:
+                                optb = OptimalBinning(name=variable, dtype="categorical", solver="cp")
+                    else:
+                        optb = ContinuousOptimalBinning(name=variable, dtype="numerical")
+                    optb.fit(x, y)
+
+                    binning_table = optb.binning_table
+                    type(binning_table)
+                    st.markdown ('Binning Table')
+                    st.dataframe(binning_table.build())
+                    st.set_option('deprecation.showPyplotGlobalUse', False)
+                    if isMultiClass == 'Yes':
+                        st.markdown('The following plot depicts a histogram for each bin and the event rate curve. Note that the Bin ID corresponds to the binning table index')
+                        st.pyplot(binning_table.plot())
+                    else:
+                        if is_numeric_dtype(editedData[col]):
+                            st.markdown('The following plot depicts the bin widths including the mean curve')
+                            st.pyplot(binning_table.plot(style='actual'))
+                        else:
+                            st.pyplot(binning_table.plot())
+                    x_transform_bins = optb.transform(x, metric="bins")
+                    editedData[col+'_bins'] = x_transform_bins
             if dummySelect != None:
                 for col in dummySelect:
                     #if is_numeric_dtype(editedData[col]) == False:
@@ -121,11 +166,26 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
 
     if not os.path.isfile(analysisPlotsPath + 'Box_Plot.png') or dataEdited:
         log_list = amb.update_logging(log_list, 'Data Analysis', 'Generating data visualisation plots')
-        amb.half_masked_corr_heatmap(workingData, analysisPlotsPath + 'Correlation.png')
-        amb.gen_scatterplots(workingData, target_att, analysisPlotsPath + 'Scatter.png')
-        amb.gen_histograms(workingData, analysisPlotsPath + 'Histograms.png')
-        amb.gen_boxplots(workingData, analysisPlotsPath + 'Box_Plot.png')
-        amb.generate_distPlot(workingData, target_att, analysisPlotsPath)
+        try:
+            amb.half_masked_corr_heatmap(workingData, analysisPlotsPath + 'Correlation.png')
+        except Exception as e:
+            print(e)
+        try:
+            amb.gen_scatterplots(workingData, target_att, analysisPlotsPath + 'Scatter.png')
+        except Exception as e:
+            print(e)
+        try:
+            amb.gen_histograms(workingData, analysisPlotsPath + 'Histograms.png')
+        except Exception as e:
+            print(e)
+        try:
+            amb.gen_boxplots(workingData, analysisPlotsPath + 'Box_Plot.png')
+        except Exception as e:
+            print(e)
+        try:
+            amb.generate_distPlot(workingData, target_att, analysisPlotsPath)
+        except Exception as e:
+            print(e)
 
     st.markdown('## Quick Data Visualisation')
     st.markdown('Quick visualisations generates plots for all attributes within the dataset including distribution plots, box plots, histograms, scatter plots for each attribute against the target and correlation plots')

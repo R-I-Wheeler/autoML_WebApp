@@ -160,7 +160,7 @@ def model_explainability(instancePath, explainabilityPath):
         filenames = os.listdir(instancePath + 'Waterfall/')
         filenames.sort()
         selected_filename = st.selectbox('Select a visualisation:', filenames, index=0)
-        img = amb.load_image(instancePath + selected_filename)
+        img = amb.load_image(instancePath + 'Waterfall/' + selected_filename)
         st.image(img, use_column_width=True)
         plt.close()
 
