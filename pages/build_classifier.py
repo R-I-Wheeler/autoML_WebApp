@@ -88,11 +88,11 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                                        ('none', 'yeo-johnson', 'quantile'), 0)
         st.markdown('### Feature Interaction')
         st.markdown(
-            'Creates new attributes by interacting (a * b) for all numeric variables in the dataset ')
+            'Creates new attributes by interacting (a * b) for all numeric attributes in the dataset ')
         interactionSelect = st.radio('Activate "Feature Interaction"', ('Yes', 'No'), index=1)
         st.markdown('### Feature Ratio')
         st.markdown(
-            'Creates new attributes by interacting (a / b) for all numeric variables in the dataset ')
+            'Creates new attributes by interacting (a / b) for all numeric attributes in the dataset ')
         ratioSelect = st.radio('Activate "Feature Ratio"', ('Yes', 'No'), index=1)
         st.markdown('### Fix Imbalance')
         st.markdown('Uses SMOTE (Synthetic Minority Over-sampling Technique) to fix an unequal distribution of the target attribute by creating new synthetic datapoints for the minority class')
