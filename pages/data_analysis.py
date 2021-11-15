@@ -21,38 +21,44 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
 
     st.markdown('## Clean Dataset')
     st.dataframe(workingData.astype('object'))
+    dataColumns = list(workingData.columns)
+    dataColumns.remove(target_att)
 
-    with st.form('drop_columns'):
+    with st.form('data_config'):
         st.markdown('## Data Configurator')
         st.markdown('#### Reset to original data')
         resetSelect = st.radio('Reset to original data', ('Yes', 'No'), index=1)
-        st.markdown('#### Select columns to drop from dataset...')
-        dataColumns = list(workingData.columns)
-        dataColumns.remove(target_att)
+        st.markdown('#### Select attribute(s) to drop from dataset...')
         dropSelect = st.multiselect('Select columns...',dataColumns, key='drop_Columns')
-        st.markdown('#### Select columns to apply log transformation (numeric only)...')
-        st.markdown('Data that does not have a "Normal Distribution" can effect how a machine learning model works. This function applies a log transformation upon the data of the selected attribute(s). You can also use functionality in the model environment setup to apply normalisation to all attributes.')
-        normaliseSelect = st.multiselect('Select columns...', dataColumns, key='normalise_Columns')
+        st.markdown('#### One-Hot Encode data columns...')
+        st.markdown('A new binary attribute will be created for each unique value within the selected attribute.')
+        dummySelect = st.multiselect('Select columns...', dataColumns, key='dummy_Columns')
         st.markdown('#### Optimal Binning')
         st.markdown('A new categorical attribute will be created using a rigorous and flexible mathematical programming formulation based upon the selected attributes realtionship with the target attribute')
         binSelect = st.multiselect('Select columns...', dataColumns, key='bin_Columns')
         if modelType == 'Classification':
             isMultiClass = st.radio('Is this a multiclass problem',('Yes','No'), index=1)
-        st.markdown('#### One-Hot Encode data columns...')
-        st.markdown('A new binary attribute will be created for each unique value within the selected attribute.')
-        dummySelect = st.multiselect('Select columns...', dataColumns, key='dummy_Columns')
+        st.markdown('#### Select columns to apply log transformation (numeric only)...')
+        st.markdown(
+            'Data that does not have a "Normal Distribution" can effect how a machine learning model works. This function applies a log transformation upon the data of the selected attribute(s). You can also use functionality in the model environment setup to apply normalisation to all attributes.')
+        normaliseSelect = st.multiselect('Select columns...', dataColumns, key='normalise_Columns')
+
         st.markdown('#### Remove outliers from the dataset')
-        st.markdown('An outlier within the dataset is defined as any value that is more than 3 standard deviations from the mean. The following function will remove all rows of data that contain an outlier.')
-        outlierSelect = st.radio('Remove Outliers from numeric data',('Yes','No'), index=1)
+        st.markdown(
+            'An outlier within the dataset is defined as any value that is more than 3 standard deviations from the mean. The following function will remove all rows of data that contain an outlier.')
+        outlierSelect = st.radio('Remove Outliers from numeric data', ('Yes', 'No'), index=1)
         st.markdown('##### You must click on "Submit" to make changes')
         submitted = st.form_submit_button("Submit")
         if submitted:
             editedData = workingData.copy()
             if resetSelect == 'Yes':
                 editedData = pd.read_csv(dataPath + 'Clean_Data.csv')
+                log_list = amb.update_logging(log_list, 'Data Analysis', 'Resetting back to Original Data')
             if dropSelect != None:
-                editedData.drop(dropSelect, axis=1, inplace=True)
-                log_list = amb.update_logging(log_list, 'Data Analysis', 'Dropping selected columns - '+str(dropSelect))
+                for col in dropSelect:
+                    st.write('Dropping attribute - '+col)
+                    editedData.drop(col, axis=1, inplace=True)
+                    log_list = amb.update_logging(log_list, 'Data Analysis', 'Dropping selected attribute - '+col)
             if normaliseSelect != None:
                 for col in normaliseSelect:
                     if is_numeric_dtype(editedData[col]):
@@ -73,7 +79,6 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
                         st.pyplot(fig)
                         log_list = amb.update_logging(log_list, 'Data Analysis',
                                                       'Applying log transform to '+col+': skew after log transformation =' + str(editedData[col].skew()))
-            st.write(str(binSelect))
             if binSelect != None:
                 for col in binSelect:
                     st.write('Optimal Binning: - '+col)
@@ -92,7 +97,6 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
                     else:
                         optb = ContinuousOptimalBinning(name=variable, dtype="numerical")
                     optb.fit(x, y)
-
                     binning_table = optb.binning_table
                     type(binning_table)
                     st.markdown ('Binning Table')
@@ -106,9 +110,11 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
                             st.markdown('The following plot depicts the bin widths including the mean curve')
                             st.pyplot(binning_table.plot(style='actual'))
                         else:
+                            st.markdown('The following plot depicts the bin widths including the mean curve')
                             st.pyplot(binning_table.plot())
                     x_transform_bins = optb.transform(x, metric="bins")
                     editedData[col+'_bins'] = x_transform_bins
+                    log_list = amb.update_logging(log_list, 'Data Analysis', 'Applied Optimal Binning to - '+col)
             if dummySelect != None:
                 for col in dummySelect:
                     #if is_numeric_dtype(editedData[col]) == False:
