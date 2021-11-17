@@ -199,7 +199,7 @@ def app():
     unseen_predictions = pd.read_csv(modellingDataPath + 'UnseenPredictions.csv')
     evaluationData = pd.read_csv(modellingDataPath + 'Evaluation_Data.csv')
 
-    st.title('AutoML ' + modelType + ' - Explainability')
+    st.title('AutoML ' + modelType + ' - eXplainable AI (XAI')
     st.markdown(
         ' This page uses SHAP (SHapley Additive exPlanations), a game theoretic approach to explain the output of any machine learning model.')
     st.markdown(

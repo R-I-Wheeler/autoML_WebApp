@@ -182,7 +182,7 @@ def main():
         app.add_page("Classifier Model Builder", build_classifier.app)
     else:
         app.add_page("Regression Model Builder", build_regression.app)
-    app.add_page("Model Explainability", explainability.app)
+    app.add_page("eXplainable AI", explainability.app)
     app.add_page("Project Log", logging.app)
     # The main app
     app.run()
