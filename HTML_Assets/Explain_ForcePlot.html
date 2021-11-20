@@ -13,15 +13,17 @@
   <body bgcolor="rgba(255,255,255,0.00)">
 	<center>
 		<h1>Explainability - SHAP Force Plot</h1>
-		<h3>This following uses SHAP (SHapley Additive exPlanations), a game theoretic approach to explain the output of any machine learning model.</h3>
+		<h3>The following uses SHAP (SHapley Additive exPlanations), a game theoretic approach to explain the output of any machine learning model.</h3>
 		<h5>...................</h5>
-		<h5>The dataset below show is the unseen evaluation data (10% of the modelling data), the additional columns show the ML models predictions in the column headed "label", and the column headed "score" contains the probability score of the prediction.</h5>
+		<h5>The dataset below shows the unseen evaluation data (10% of the modelling data), the additional columns include the ML models predictions in the column headed "label", and the probability score of the prediction in the column headed "score".</h5>
 		<h5> </h5>
 		<div>
-		  <iframe style="align-content: center"  width="100%" height="300px" src="modelling/data/UnseenPredictions.html" allowfullscreen></iframe>
+		  <iframe style="align-content: center"  width="90%" height="400px" src="modelling/data/UnseenPredictions.html" allowfullscreen></iframe>
 		</div>
 		<h5>...................</h5>
-		<h5>A SHAP Force Plot shows how each of the features contributes to push the model output from the base value, the average model output over the entire training dataset used to develop the model, to the predicted output of the selected instance of the unseen data. Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue.</h5>
+		<h5>A SHAP Force Plot shows how each of the features contributes to push the model output from the base value to the predicted output of the selected instance of the unseen data.</h5>
+		<h5>The base value is the average model output over the entire training dataset.</h5>
+		<h5>Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue.</h5>
 		<h5>...................</h5>
 		<h5>From the dropdown below you can select the Force Plot you wish to view related to the first ten instances from the unseen data above</h5>
 		<div class="dropdown">
@@ -43,12 +45,13 @@
 		</div>
 		<h5> </h5>
 		<div>
-		  <iframe style="align-content: center"  width="100%" height="200px" name="reportframe" src="explainability/Instance/Force/forcePlot_instance_0.html" allowfullscreen></iframe>
+		  <iframe style="align-content: center"  width="90%" height="200px" name="reportframe" src="explainability/Instance/Force/forcePlot_instance_0.html" allowfullscreen></iframe>
 		</div>
 		<h5>...................</h5>
-		<h5> The following plot shows the same output as above, but vertically, and for every instance of the unseen data (up to a maximum of the first 50 instances)</h5>
+		<h5> The explainer plot below, shows force plots for every instance in the unseen data within a single visualisation (Up to a maximum of the first 50 rows). </h5>
+		<h5>By using the dropdown menus in each axis the user can view different aspects, for example the effect on the output of the model by a specific attribute on all of the predictions, or the effect one attribute has on another. </h5>
 		<div>
-		  <iframe style="align-content: center"  width="100%" height="500px" src="explainability/explainer.html" allowfullscreen></iframe>
+		  <iframe style="align-content: center"  width="90%" height="500px" src="explainability/explainer.html" allowfullscreen></iframe>
 		</div>
 	</center>
 	
