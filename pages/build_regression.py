@@ -325,8 +325,10 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
         st.markdown ('### Best Model (Tuned)')
         st.write(tunedModel)
+        logModelDescription = str(tunedModel)
+        logModelDescription = logModelDescription.replace("\n", " ")
         log_list = amb.update_logging(log_list, 'Build Regression',
-                                      'Best Model - '+str(tunedModel))
+                                      'Best Model - '+logModelDescription)
         file = open(modellingModelPath + "model_description.txt", "w")
         model_desc = repr(tunedModel)
         file.write(model_desc + "\n")

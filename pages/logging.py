@@ -39,10 +39,11 @@ def app():
         # destination directory
         shutil.copy2(os.path.join(src_dir, fname), dest_dir)
 
+    st.markdown('### Download Project Files')
     shutil.make_archive(project_name, 'zip', './Projects/'+project_name)
     with open(project_name+".zip", "rb") as fp:
         btn = st.download_button(
-            label="Download Project",
+            label="Download",
             data=fp,
             file_name=project_name+".zip",
             mime="application/zip"
