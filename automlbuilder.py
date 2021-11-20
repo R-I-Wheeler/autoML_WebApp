@@ -101,7 +101,7 @@ def half_masked_corr_heatmap(workingdata, file=None):
     with sns.axes_style("white"):
         sns.heatmap(workingdata.corr(), mask=mask, annot=True, cmap='coolwarm')
 
-    plt.title(f'Variable Correlations', fontsize=24)
+    plt.title(f'Numeric Attribute Correlations', fontsize=24)
 
     if file: plt.savefig(file, bbox_inches='tight')
     return
@@ -134,7 +134,7 @@ def gen_scatterplots(workingdata, target_column, file=None):
         ax[i].set_ylabel(f'{target_column}', fontsize=14)
         ax[i].set_xlabel(f'{column}', fontsize=14)
 
-    fig.suptitle('\nEach Feature vs. '+target_column+' - Scatter Plots', size=24)
+    fig.suptitle('\nEach Attribute vs. '+target_column+' - Scatter Plots', size=24)
     fig.tight_layout()
     fig.subplots_adjust(bottom=0, top=0.88)
     if file: plt.savefig(file, bbox_inches='tight')
@@ -160,7 +160,7 @@ def gen_histograms(workingdata, file=None):
         ax[i].set_ylabel('Observations', fontsize=18)
         ax[i].set_xlabel('', fontsize=18)
 
-    fig.suptitle('\nHistograms for All Variables', size=24)
+    fig.suptitle('\nHistograms for All Attributes', size=24)
     fig.tight_layout()
     fig.subplots_adjust(bottom=0, top=0.9)
     if file: plt.savefig(file, bbox_inches='tight')
@@ -194,7 +194,7 @@ def gen_boxplots(workingdata, file=None):
         ax[i].set_xlabel('', fontsize=14)
         ax[i].tick_params(labelbottom=False)
 
-    fig.suptitle('\nBoxplots for All Numeric Variables', size=24)
+    fig.suptitle('\nBoxplots for All Numeric Attributes', size=24)
     fig.tight_layout()
     fig.subplots_adjust(bottom=0, top=0.88)
     if file: plt.savefig(file, bbox_inches='tight')
