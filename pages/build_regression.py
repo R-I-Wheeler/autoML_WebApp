@@ -96,7 +96,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         interactionSelect = st.radio('Activate "Feature Interaction"', ('Yes', 'No'), index=1)
         st.markdown('### Feature Ratio')
         st.markdown(
-            'Creates new attributes by interacting (a / b) for all numeric attributes in the dataset ')
+            'Creates new attributes by calculating the ratio (a / b) of all numeric attributes in the dataset ')
         ratioSelect = st.radio('Activate "Feature Ratio"', ('Yes', 'No'), index=1)
 
         st.markdown('### Combine Rare Levels')
