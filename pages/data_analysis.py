@@ -14,6 +14,7 @@ from optbinning import MulticlassOptimalBinning
 
 import automlbuilder as amb
 
+#Main Data Analysis function
 def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modellingDataPath, log_list, analysisReportsPath, dataPath):
     dataEdited = False
     log_list = amb.update_logging(log_list, 'Data Analysis', 'Starting Data Analysis')
