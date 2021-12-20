@@ -38,6 +38,8 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
         binSelect = st.multiselect('Select columns...', dataColumns, key='bin_Columns')
         if modelType == 'Classification':
             isMultiClass = st.radio('Is this a multiclass problem',('Yes','No'), index=1)
+        else:
+            isMultiClass = 'No'
         st.markdown('#### Select columns to apply log transformation (numeric only)...')
         st.markdown(
             'Data that does not have a "Normal Distribution" can effect how a machine learning model works. This function applies a log transformation upon the data of the selected attribute(s). You can also use functionality in the model environment setup to apply normalisation to all attributes.')
