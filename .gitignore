@@ -1,3 +1,4 @@
 /catboost_info/
 logs.log
 /data/
+/__pycache__/
