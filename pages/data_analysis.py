@@ -118,6 +118,8 @@ def data_analysis(workingData, target_att, modelType, analysisPlotsPath, modelli
                     x_transform_bins = optb.transform(x, metric="bins")
                     editedData[col+'_bins'] = x_transform_bins
                     log_list = amb.update_logging(log_list, 'Data Analysis', 'Applied Optimal Binning to - '+col)
+                    editedData.drop(col, axis=1, inplace=True)
+                    log_list = amb.update_logging(log_list, 'Data Analysis', 'Dropping binned attribute - ' + col)
             if dummySelect != None:
                 for col in dummySelect:
                     #if is_numeric_dtype(editedData[col]) == False:
