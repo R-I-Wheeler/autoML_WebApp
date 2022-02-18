@@ -11,12 +11,17 @@ from pathlib import Path
 from pycaret.regression import *
 from pycaret.utils import check_metric
 
-def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod,  targetTransform, targetMethod, combineLevels, featureInteraction, featureRatio):
+def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod,  targetTransform, targetMethod, combineLevels,
+                featureInteraction, featureRatio, featureSelection):
+    projectName = st.session_state.projectName
+    envSetup = setup(data=trainingData, target=target_att, session_id=42, normalize=activateNormalise, normalize_method=normaliseMethod, transformation=activateTransform,
+                     transformation_method=transformMethod, transform_target=targetTransform, transform_target_method=targetMethod, combine_rare_levels=combineLevels,
+                     feature_interaction=featureInteraction, feature_ratio=featureRatio, feature_selection=featureSelection, log_experiment=True, experiment_name=projectName,
+                     log_plots=True, log_data=True, silent=True)
 
-    envSetup = setup(data=trainingData, target=target_att, session_id=42, normalize=activateNormalise, normalize_method=normaliseMethod, transformation=activateTransform, transformation_method=transformMethod,
-                         transform_target=targetTransform, transform_target_method=targetMethod, combine_rare_levels=combineLevels, feature_interaction=featureInteraction, feature_ratio=featureRatio, silent=True)
     environmentData = pull(True)
-    best_model = compare_models(exclude=['catboost'])
+    #best_model = compare_models(exclude=['catboost'])
+    best_model = compare_models()
     modelComparison = pull(True)
     train = get_config('X_train')
     test = get_config('X_test')
@@ -66,6 +71,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     combineLevels = st.session_state.combineLevels
     featureInteraction = st.session_state.featureInteraction
     featureRatio = st.session_state.featureRatio
+    featureSelection = st.session_state.featureSelection
 
     with st.form('environment_config'):
         st.markdown('## AutoML Environment Configuration')
@@ -98,7 +104,10 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.markdown(
             'Creates new attributes by calculating the ratio (a / b) of all numeric attributes in the dataset ')
         ratioSelect = st.radio('Activate "Feature Ratio"', ('Yes', 'No'), index=1)
-
+        st.markdown('### Feature Selection')
+        st.markdown(
+            'A subset of features are selected using a combination of various permutation importance techniques including Random Forest, Adaboost and Linear correlation with target variable')
+        featureSelect = st.radio('Activate "Feature Selection"', ('Yes', 'No'), index=1)
         st.markdown('### Combine Rare Levels')
         st.markdown('Categorical features are combined when there frequency is below 10%')
         combineSelect = st.radio('Activate "Combine Rare Levels', ('Yes', 'No'), index=0)
@@ -140,6 +149,12 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                                       'Feature Ratio Activated')
     else:
         featureRatio = False
+    if featureSelect != 'No':
+        featureSelection = True
+        log_list = amb.update_logging(log_list, 'Classifier Environment Configuration',
+                                      'Feature Selection Activated')
+    else:
+        featureSelection = False
     if combineSelect != 'Yes':
         combineLevels = False
         log_list = amb.update_logging(log_list, 'Regression Environment Configuration',
@@ -156,6 +171,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.session_state.combineLevels = combineLevels
     st.session_state.featureInteraction = featureInteraction
     st.session_state.featureRatio = featureRatio
+    st.session_state.featureSelection = featureSelection
 
     if not os.path.isfile(modellingDataPath + "Modelling_Environment_Config.txt") or regressConfig:
         file = open(modellingDataPath + "Modelling_Environment_Config.txt", "w")
@@ -168,6 +184,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         file.write(str(interactionSelect) + "\n")
         file.write(str(ratioSelect) + "\n")
         file.write(str(combineLevels) + "\n")
+        file.write(str(featureSelection) + "\n")
         file.close()
 
     if not os.path.isfile(modellingDataPath+"Environment_Data.html") or regressConfig or regressTuning:
@@ -181,30 +198,34 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                                                                                 activateNormalise, normaliseMethod,
                                                                                 activateTransform, transformMethod,
                                                                                 targetTransform, targetMethod,
-                                                                                combineLevels, featureInteraction, featureRatio)
+                                                                                combineLevels, featureInteraction,
+                                                                                featureRatio, featureSelection)
 
         st.markdown('### AutoML Environment')
         st.markdown('Table showing the configuration of the modelling environment')
-        st.dataframe(environmentData)
-        f = open(modellingDataPath+"Environment_Data.html", "w")
+        my_file = Path(modellingDataPath + "Environment_Data.html")
+
+        f = open(my_file, "w")
         style_text = '<style>table {border-collapse: collapse;border-radius: 5px;box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);overflow: hidden;font-family: "Ariel", sans-serif;font-weight: bold;font-size: 14px;}th {background: #4B4B4B;color: #ffffff;text-align: left;}th,td {padding: 10px 20px;}tr:nth-child(even) {background: #eeeeee;}</style>\n'
-        f.write(style_text+environmentData.render())
+        f.write(style_text + environmentData.render())
         f.close()
 
-        st.markdown ('### Training Data')
-        st.markdown('The training data created during the environment setup to be used for developing the model.')
+        HtmlFile = open(my_file, 'r', encoding='utf-8')
+        source_code = HtmlFile.read()
+        components.html(source_code, height=500, scrolling=True)
+    else:
+        my_file = Path(modellingDataPath + "Environment_Data.html")
+        HtmlFile = open(my_file, 'r', encoding='utf-8')
+        source_code = HtmlFile.read()
+        components.html(source_code, height=500, scrolling=True)
+
+    st.markdown ('### Training Data')
+    st.markdown('The training data created during the environment setup to be used for developing the model.')
+    try:
         train = get_config('X_train')
         st.dataframe(train)
-    else:
-        st.markdown('### AutoML Environment')
-        st.markdown('Table showing the configuration of the modelling environment')
-        my_file = Path(modellingDataPath+"Environment_Data.html")
-        if my_file.is_file():
-            HtmlFile = open(my_file, 'r', encoding='utf-8')
-            source_code = HtmlFile.read()
-            # print(source_code)
-            components.html(source_code, height=500, scrolling=True)
-
+    except:
+        st.write('Unable to display training data dataframe at this time')
 
     st.markdown ('### Training & Test Data Comparison')
     st.markdown('A Sweetviz report comparing the data that will be used for training and testing during model development')
@@ -314,13 +335,18 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                     combineLevels = True
                 else:
                     combineLevels = False
+                if str(lines[9].strip()) == 'True':
+                    featureSelection = True
+                else:
+                    featureSelection = False
 
             trainingData, evaluationData = amb.setup_modelling_data(workingData)
             best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att,
                                                                                     activateNormalise, normaliseMethod,
                                                                                     activateTransform, transformMethod,
                                                                                     targetTransform, targetMethod,
-                                                                                    combineLevels, featureInteraction, featureRatio)
+                                                                                    combineLevels, featureInteraction,
+                                                                                    featureRatio, featureSelection)
         tunedModel, tuningData = build_model(ensembleSelect, metricSelect, numEstimators, numIterations, modelChange)
 
         st.markdown ('### Best Model (Tuned)')
@@ -336,24 +362,25 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
         st.markdown ('### Model Tuning Results')
         st.markdown('Shows the performance scores from training and testing the model whilst tuning for each fold')
-        st.write(tuningData)
         amb.csv_to_html(tuningData, '#4B4B4B', modellingDataPath, 'Tuning_Results.html')
+        my_file = Path(modellingDataPath + "Tuning_Results.html")
+        if my_file.is_file():
+            HtmlFile = open(my_file, 'r', encoding='utf-8')
+            source_code = HtmlFile.read()
+            components.html(source_code, height=500, scrolling=True)
     else:
         with open(modellingModelPath + "model_description.txt") as f:
             contents = f.readlines()
         st.markdown('### Best Model (Tuned)')
         st.write(contents)
-
         st.markdown('### Model Tuning Results')
-        st.markdown('Shows the performance scores from training and testing the model whilst tuning for each fold')
         my_file = Path(modellingDataPath + "Tuning_Results.html")
         if my_file.is_file():
             HtmlFile = open(my_file, 'r', encoding='utf-8')
             source_code = HtmlFile.read()
-            # print(source_code)
             components.html(source_code, height=500, scrolling=True)
 
-    if not os.path.isfile(modellingAnalysisPath + "feature_importance.png") or regressConfig or regressTuning:
+    if not os.path.isfile(modellingAnalysisPath + "residuals_plot.png") or regressConfig or regressTuning:
         st.markdown ('### Model Analysis')
         st.markdown ('Selection of plots to be used to evaluate the model')
         X_train = train

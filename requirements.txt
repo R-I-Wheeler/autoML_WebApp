@@ -5,6 +5,7 @@ seaborn~=0.11.2
 numpy~=1.19.5
 scipy~=1.7.2
 optbinning~=0.13.0
+ortools~=9.1.9490
 shap~=0.39.0
 pycaret~=2.3.4
 sweetviz~=2.1.3

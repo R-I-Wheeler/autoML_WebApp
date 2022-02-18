@@ -11,13 +11,17 @@ from pathlib import Path
 from pycaret.classification import *
 from pycaret.utils import check_metric
 
-def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, fixImbalance, combineLevels, featureInteraction, featureRatio):
-
-    envSetup = setup(data=trainingData, target=target_att, session_id=42, normalize=activateNormalise, normalize_method=normaliseMethod, transformation=activateTransform, transformation_method=transformMethod,
-                         fix_imbalance=fixImbalance, combine_rare_levels=combineLevels, feature_interaction=featureInteraction, feature_ratio=featureRatio, silent=True)
+def setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, fixImbalance, combineLevels, featureInteraction, featureRatio,
+                featureSelection):
+    projectName = st.session_state.projectName
+    envSetup = setup(data=trainingData, target=target_att, session_id=42, train_size=0.9, normalize=activateNormalise, normalize_method=normaliseMethod,
+                     transformation=activateTransform, transformation_method=transformMethod, fix_imbalance=fixImbalance, combine_rare_levels=combineLevels,
+                     feature_interaction=featureInteraction, feature_ratio=featureRatio, feature_selection=featureSelection, silent=True, log_experiment=True,
+                     experiment_name=projectName, log_plots=True, log_data=True)
 
     environmentData = pull(True)
-    best_model = compare_models(exclude=['catboost'])
+    #best_model = compare_models(exclude=['catboost'])
+    best_model = compare_models()
     modelComparison = pull(True)
     train = get_config('X_train')
     test = get_config('X_test')
@@ -66,6 +70,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     combineLevels = st.session_state.combineLevels
     featureInteraction = st.session_state.featureInteraction
     featureRatio = st.session_state.featureRatio
+    featureSelection = st.session_state.featureSelection
 
     with st.form('environment_config'):
         st.markdown('## AutoML Environment Configuration')
@@ -97,6 +102,10 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         st.markdown('### Fix Imbalance')
         st.markdown('Uses SMOTE (Synthetic Minority Over-sampling Technique) to fix an unequal distribution of the target attribute by creating new synthetic datapoints for the minority class')
         imbalanceSelect = st.radio('Activate "Fix Imbalance"', ('Yes', 'No'), index=1)
+        st.markdown('### Feature Selection')
+        st.markdown(
+            'A subset of features are selected using a combination of various permutation importance techniques including Random Forest, Adaboost and Linear correlation with target variable')
+        featureSelect = st.radio('Activate "Feature Selection"', ('Yes', 'No'), index=1)
         st.markdown('### Combine Rare Levels')
         st.markdown('Categorical features created during environment setup are combined when there frequency is below 10%')
         combineSelect = st.radio('Activate "Combine Rare Levels"', ('Yes', 'No'), index=0)
@@ -121,6 +130,12 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                                       'Feature Interaction Activated')
     else:
         featureInteraction = False
+        if interactionSelect != 'No':
+            featureInteraction = True
+            log_list = amb.update_logging(log_list, 'Classifier Environment Configuration',
+                                          'Feature Interaction Activated')
+        else:
+            featureInteraction = False
     if ratioSelect != 'No':
         featureRatio = True
         log_list = amb.update_logging(log_list, 'Classifier Environment Configuration',
@@ -133,7 +148,12 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                                       'Fix Imbalance Activated')
     else:
         fixImbalance = False
-
+    if featureSelect != 'No':
+        featureSelection = True
+        log_list = amb.update_logging(log_list, 'Classifier Environment Configuration',
+                                      'Feature Selection Activated')
+    else:
+        featureSelection = False
     if combineSelect != 'Yes':
         combineLevels = False
         log_list = amb.update_logging(log_list, 'Classifier Environment Configuration',
@@ -150,6 +170,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
     st.session_state.combineLevels = combineLevels
     st.session_state.featureInteraction = featureInteraction
     st.session_state.featureRatio = featureRatio
+    st.session_state.featureSelection = featureSelection
 
     if not os.path.isfile(modellingDataPath + "Modelling_Environment_Config.txt") or classConfig:
         file = open(modellingDataPath + "Modelling_Environment_Config.txt", "w")
@@ -161,6 +182,7 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         file.write(str(ratioSelect) + "\n")
         file.write(str(fixImbalance) + "\n")
         file.write(str(combineLevels) + "\n")
+        file.write(str(featureSelection) + "\n")
         file.close()
 
     if not os.path.isfile(modellingDataPath+"Environment_Data.html") or classConfig or classTuning:
@@ -170,33 +192,36 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
 
         log_list = amb.update_logging(log_list, 'Build Classifier',
                                       'AutoML Environment Setup')
-        best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod, fixImbalance, combineLevels, featureInteraction, featureRatio)
+        best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att, activateNormalise, normaliseMethod, activateTransform, transformMethod,
+                                                                                fixImbalance, combineLevels, featureInteraction, featureRatio, featureSelection)
 
         st.markdown('### AutoML Environment')
         st.markdown('Table showing the configuration of the modelling environment')
-        st.dataframe(environmentData)
-        f = open(modellingDataPath+"Environment_Data.html", "w")
+        my_file = Path(modellingDataPath + "Environment_Data.html")
+
+        f = open(my_file, "w")
         style_text = '<style>table {border-collapse: collapse;border-radius: 5px;box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);overflow: hidden;font-family: "Ariel", sans-serif;font-weight: bold;font-size: 14px;}th {background: #4B4B4B;color: #ffffff;text-align: left;}th,td {padding: 10px 20px;}tr:nth-child(even) {background: #eeeeee;}</style>\n'
-        f.write(style_text+environmentData.render())
+        f.write(style_text + environmentData.render())
         f.close()
 
-        st.markdown ('### Training Data')
-        st.markdown('The training data created during the environment setup to be used for developing the model.')
-        train = get_config('X_train')
-        st.dataframe(train)
+        HtmlFile = open(my_file, 'r', encoding='utf-8')
+        source_code = HtmlFile.read()
+        components.html(source_code, height=500, scrolling=True)
+
     else:
-        st.markdown('### AutoML Environment')
-        st.markdown('Table showing the configuration of the modelling environment')
-        my_file = Path(modellingDataPath+"Environment_Data.html")
-        if my_file.is_file():
-            HtmlFile = open(my_file, 'r', encoding='utf-8')
-            source_code = HtmlFile.read()
-            # print(source_code)
-            components.html(source_code, height=500, scrolling=True)
+        my_file = Path(modellingDataPath + "Environment_Data.html")
+        HtmlFile = open(my_file, 'r', encoding='utf-8')
+        source_code = HtmlFile.read()
+        components.html(source_code, height=500, scrolling=True)
+    st.markdown('### Transformed Data')
+    st.markdown('The data created during the environment setup to be used for developing the model.')
+    try:
+        st.dataframe(train)
+    except:
+        st.write('Unable to display training data dataframe at this time')
 
-
-    st.markdown ('### Training & Test Data Comparison')
-    st.markdown('A Sweetviz report comparing the data that will be used for training and testing during model development')
+    st.markdown ('### Transformed Modelling Data Report')
+    st.markdown('A Sweetviz report for the data that will be used for training and testing during model development')
 
     if not os.path.isfile(modellingReportsPath + 'TrainingData_Report.html') or classConfig or classTuning:
         amb.generate_sv(train, '', 'TrainingData',test, True, modellingReportsPath)
@@ -302,12 +327,18 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
                     combineLevels = True
                 else:
                     combineLevels = False
+                if str(lines[8].strip()) == 'True':
+                    featureSelection = True
+                else:
+                    featureSelection = False
 
             trainingData, evaluationData = amb.setup_modelling_data(workingData)
             best_model, train, test, environmentData, modelComparison = setup_model(trainingData, target_att,
                                                                                     activateNormalise, normaliseMethod,
                                                                                     activateTransform, transformMethod,
-                                                                                    fixImbalance, combineLevels, featureInteraction, featureRatio)
+                                                                                    fixImbalance, combineLevels,
+                                                                                    featureInteraction, featureRatio,
+                                                                                    featureSelection)
         tunedModel, tuningData = build_model(ensembleSelect, metricSelect, numEstimators, numIterations, modelChange)
 
         st.markdown ('### Best Model (Tuned)')
@@ -320,26 +351,25 @@ def model_development(workingData, target_att, modelType, modellingReportsPath, 
         model_desc = repr(tunedModel)
         file.write(model_desc + "\n")
         file.close()
-
-        st.markdown ('### Model Tuning Results')
-        st.markdown('Shows the performance scores from training and testing the model whilst tuning for each fold')
-        st.write(tuningData)
         amb.csv_to_html(tuningData, '#4B4B4B', modellingDataPath, 'Tuning_Results.html')
-    else:
-        with open(modellingModelPath + "model_description.txt") as f:
-            contents = f.readlines()
-        st.markdown('### Best Model (Tuned)')
-        st.write(contents)
-
-        st.markdown('### Model Tuning Results')
+        st.markdown ('### Model Tuning Results')
         st.markdown('Shows the performance scores from training and testing the model whilst tuning for each fold')
         my_file = Path(modellingDataPath + "Tuning_Results.html")
         if my_file.is_file():
             HtmlFile = open(my_file, 'r', encoding='utf-8')
             source_code = HtmlFile.read()
-            # print(source_code)
             components.html(source_code, height=500, scrolling=True)
-
+    else:
+        with open(modellingModelPath + "model_description.txt") as f:
+            contents = f.readlines()
+        st.markdown('### Best Model (Tuned)')
+        st.write(contents)
+        st.markdown('### Model Tuning Results')
+        my_file = Path(modellingDataPath + "Tuning_Results.html")
+        if my_file.is_file():
+            HtmlFile = open(my_file, 'r', encoding='utf-8')
+            source_code = HtmlFile.read()
+            components.html(source_code, height=500, scrolling=True)
     if not os.path.isfile(modellingAnalysisPath + "area_under_curve.png") or classConfig or classTuning:
         st.markdown ('### Model Analysis')
         st.markdown ('Selection of plots to be used to evaluate the model')
